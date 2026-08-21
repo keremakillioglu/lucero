@@ -301,6 +301,11 @@ export const mcp = {
 
 export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${serverName}`;
 
+export const mcpToolCall = (serverName: string, toolName: string) =>
+  `${BASE_URL}/api/mcp/${encodeURIComponent(serverName)}/tools/${encodeURIComponent(toolName)}/call`;
+
+export const mcpViewsSuggest = () => `${BASE_URL}/api/mcp/views/suggest`;
+
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;
 
 export const files = () => `${BASE_URL}/api/files`;

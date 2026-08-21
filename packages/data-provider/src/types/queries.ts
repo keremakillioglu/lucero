@@ -134,6 +134,38 @@ export type MCPServersResponse = {
   servers: Record<string, MCPServer>;
 };
 
+export type MCPToolCallParams = {
+  serverName: string;
+  toolName: string;
+  toolArguments?: Record<string, unknown>;
+};
+
+export type MCPToolCallResponse = {
+  success: boolean;
+  serverName: string;
+  toolName: string;
+  result: string;
+};
+
+export type MCPSuggestedView = {
+  title: string;
+  serverName: string;
+  toolName: string;
+  arguments: Record<string, unknown>;
+  display: 'line' | 'bar' | 'table';
+};
+
+export type MCPViewsSuggestParams = {
+  prompt?: string;
+  servers: Record<string, { tools: Array<{ name: string; description: string }> }>;
+};
+
+export type MCPViewsSuggestResponse = {
+  success: boolean;
+  views: MCPSuggestedView[];
+  notes?: string;
+};
+
 export type VerifyToolAuthParams = { toolId: string };
 export type VerifyToolAuthResponse = {
   authenticated: boolean;

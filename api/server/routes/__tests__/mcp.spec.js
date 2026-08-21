@@ -2041,6 +2041,99 @@ describe('MCP Routes', () => {
     });
   });
 
+  describe('POST /:serverName/tools/:toolName/call', () => {
+    it('should return 404 when server is not found in configuration', async () => {
+      mockRegistryInstance.getServerConfig.mockResolvedValue(null);
+
+      const response = await request(app).post('/api/mcp/missing-server/tools/some_tool/call');
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        error: "MCP server 'missing-server' not found in configuration",
+      });
+    });
+
+    it('should return 400 when toolArguments is not an object', async () => {
+      const response = await request(app)
+        .post('/api/mcp/test-server/tools/some_tool/call')
+        .send({ toolArguments: ['not', 'an', 'object'] });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: '`toolArguments` must be an object' });
+    });
+
+    it('should return 403 when user lacks MCP use permission', async () => {
+      mockMCPUseAllowed = false;
+
+      const response = await request(app).post('/api/mcp/test-server/tools/some_tool/call');
+
+      expect(response.status).toBe(403);
+    });
+
+    it('should return 401 when user is not authenticated', async () => {
+      const unauthApp = express();
+      unauthApp.use(express.json());
+      unauthApp.use((req, res, next) => {
+        req.user = null;
+        next();
+      });
+      unauthApp.use('/api/mcp', mcpRouter);
+
+      const response = await request(unauthApp).post('/api/mcp/test-server/tools/some_tool/call');
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ error: 'User not authenticated' });
+    });
+
+    it('should call the tool and return its text content', async () => {
+      const mockCallTool = jest.fn().mockResolvedValue(['{"revenue": 42}', undefined]);
+      mockRegistryInstance.getServerConfig.mockResolvedValue({
+        customUserVars: { API_KEY: { title: 'API Key' } },
+      });
+      require('~/config').getMCPManager.mockReturnValue({ callTool: mockCallTool });
+      require('~/config').getFlowStateManager.mockReturnValue({});
+      require('~/cache').getLogStores.mockReturnValue({});
+      require('@librechat/api').getUserMCPAuthMap.mockResolvedValue({
+        'mcp_test-server': { API_KEY: 'secret' },
+      });
+
+      const response = await request(app)
+        .post('/api/mcp/test-server/tools/get_report/call')
+        .send({ toolArguments: { metric: 'revenue' } });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        success: true,
+        serverName: 'test-server',
+        toolName: 'get_report',
+        result: '{"revenue": 42}',
+      });
+      expect(mockCallTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          serverName: 'test-server',
+          toolName: 'get_report',
+          provider: 'openai',
+          toolArguments: { metric: 'revenue' },
+          customUserVars: { API_KEY: 'secret' },
+        }),
+      );
+    });
+
+    it('should return 500 with the error message when the tool call fails', async () => {
+      mockRegistryInstance.getServerConfig.mockResolvedValue({});
+      require('~/config').getMCPManager.mockReturnValue({
+        callTool: jest.fn().mockRejectedValue(new Error('Tool exploded')),
+      });
+      require('~/config').getFlowStateManager.mockReturnValue({});
+      require('~/cache').getLogStores.mockReturnValue({});
+
+      const response = await request(app).post('/api/mcp/test-server/tools/get_report/call');
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({ error: 'Tool exploded' });
+    });
+  });
+
   describe('GET /connection/status', () => {
     const { getMCPSetupData, getServerConnectionStatus } = require('~/server/services/MCP');
 

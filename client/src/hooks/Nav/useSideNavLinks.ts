@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MCPIcon, AttachmentIcon, OpenAIMinimalIcon } from '@librechat/client';
 import {
   Bot,
@@ -6,6 +7,7 @@ import {
   Bookmark,
   NotebookPen,
   ScrollText,
+  LayoutDashboard,
   ArrowRightToLine,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -89,6 +91,7 @@ export default function useSideNavLinks({
     permission: Permissions.CREATE,
   });
   const { availableMCPServers } = useMCPServerManager();
+  const navigate = useNavigate();
 
   const { agentsConfig } = useGetAgentsConfig({ endpointsConfig });
   const { skillsEnabled } = useAgentCapabilities(agentsConfig?.capabilities);
@@ -206,6 +209,16 @@ export default function useSideNavLinks({
       });
     }
 
+    if (hasAccessToUseMCPSettings && availableMCPServers && availableMCPServers.length > 0) {
+      links.push({
+        title: 'com_ui_mcp_views',
+        label: '',
+        icon: LayoutDashboard,
+        id: 'mcp-views',
+        onClick: () => navigate('/views'),
+      });
+    }
+
     if (includeHidePanel && hidePanel) {
       links.push({
         title: 'com_sidepanel_hide_panel',
@@ -236,6 +249,7 @@ export default function useSideNavLinks({
     hasAccessToCreateMCP,
     includeHidePanel,
     hidePanel,
+    navigate,
   ]);
 
   return Links;

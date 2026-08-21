@@ -44,6 +44,32 @@ export const useCreateMCPServerMutation = (options?: {
 };
 
 /**
+ * Hook for calling an MCP tool directly (used by the Views panel)
+ */
+export const useCallMCPToolMutation = (options?: {
+  onSuccess?: (data: t.MCPToolCallResponse, variables: t.MCPToolCallParams) => void;
+  onError?: (error: Error, variables: t.MCPToolCallParams) => void;
+}): UseMutationResult<t.MCPToolCallResponse, Error, t.MCPToolCallParams> => {
+  return useMutation((params: t.MCPToolCallParams) => dataService.callMCPTool(params), {
+    onSuccess: (data, variables) => options?.onSuccess?.(data, variables),
+    onError: (error, variables) => options?.onError?.(error, variables),
+  });
+};
+
+/**
+ * Hook for LLM-suggested dashboard views over the user's MCP sources
+ */
+export const useSuggestMCPViewsMutation = (options?: {
+  onSuccess?: (data: t.MCPViewsSuggestResponse, variables: t.MCPViewsSuggestParams) => void;
+  onError?: (error: Error, variables: t.MCPViewsSuggestParams) => void;
+}): UseMutationResult<t.MCPViewsSuggestResponse, Error, t.MCPViewsSuggestParams> => {
+  return useMutation((params: t.MCPViewsSuggestParams) => dataService.suggestMCPViews(params), {
+    onSuccess: (data, variables) => options?.onSuccess?.(data, variables),
+    onError: (error, variables) => options?.onError?.(error, variables),
+  });
+};
+
+/**
  * Hook for updating an existing MCP server
  */
 export const useUpdateMCPServerMutation = (options?: {

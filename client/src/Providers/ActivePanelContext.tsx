@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
+import type { ComponentType } from 'react';
 
 const STORAGE_KEY = 'side:active-panel';
 export const DEFAULT_PANEL = 'conversations';
@@ -36,9 +37,12 @@ export function useActivePanel() {
   return context;
 }
 
-/** Returns `active` when it matches a known link, otherwise the first link's id. */
-export function resolveActivePanel(active: string, links: { id: string }[]): string {
-  if (links.length > 0 && links.some((l) => l.id === active)) {
+/** Returns `active` when it matches a link that renders a panel, otherwise the first link's id. */
+export function resolveActivePanel(
+  active: string,
+  links: { id: string; Component?: ComponentType }[],
+): string {
+  if (links.length > 0 && links.some((l) => l.id === active && l.Component != null)) {
     return active;
   }
   return links[0]?.id ?? active;

@@ -1,4 +1,6 @@
 const { Router } = require('express');
+const OpenAI = require('openai');
+const Anthropic = require('@anthropic-ai/sdk');
 const { logger, getTenantId, tenantStorage } = require('@librechat/data-schemas');
 const {
   CacheKeys,
@@ -6,6 +8,7 @@ const {
   PermissionBits,
   PermissionTypes,
   Permissions,
+  EModelEndpoint,
 } = require('librechat-data-provider');
 const {
   getBasePath,
@@ -738,6 +741,334 @@ router.post(
     }
   },
 );
+
+/**
+ * Resolves server config and auth for a user, calls an MCP tool, and returns its text content.
+ * Throws an Error with a `status` property on resolution failures.
+ */
+async function resolveAndCallTool({ req, user, serverName, toolName, toolArguments }) {
+  const configServers = await resolveConfigServers(req);
+  const serverConfig = await getMCPServersRegistry().getServerConfig(
+    serverName,
+    user.id,
+    configServers,
+  );
+  if (!serverConfig) {
+    const error = new Error(`MCP server '${serverName}' not found in configuration`);
+    error.status = 404;
+    throw error;
+  }
+
+  /** @type {Record<string, string> | undefined} */
+  let customUserVars;
+  if (serverConfig.customUserVars && typeof serverConfig.customUserVars === 'object') {
+    const userMCPAuthMap = await getUserMCPAuthMap({
+      userId: user.id,
+      servers: [serverName],
+      findPluginAuthsByKeys: db.findPluginAuthsByKeys,
+    });
+    customUserVars = userMCPAuthMap?.[`${Constants.mcp_prefix}${serverName}`];
+  }
+
+  const flowsCache = getLogStores(CacheKeys.FLOWS);
+  const flowManager = getFlowStateManager(flowsCache);
+
+  const [content] = await getMCPManager().callTool({
+    user,
+    serverName,
+    serverConfig,
+    toolName,
+    provider: 'openai',
+    toolArguments,
+    customUserVars,
+    flowManager,
+    tokenMethods: {
+      findToken: db.findToken,
+      createToken: db.createToken,
+      updateToken: db.updateToken,
+      deleteTokens: db.deleteTokens,
+    },
+  });
+
+  return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+}
+
+/**
+ * Call a tool on an MCP server and return its text content
+ * Used by the MCP Views panel to display server data outside of chat
+ */
+router.post(
+  '/:serverName/tools/:toolName/call',
+  requireJwtAuth,
+  checkMCPUsePermissions,
+  async (req, res) => {
+    try {
+      const { serverName, toolName } = req.params;
+      const user = createSafeUser(req.user);
+
+      if (!user.id) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const toolArguments = req.body?.toolArguments ?? {};
+      if (typeof toolArguments !== 'object' || Array.isArray(toolArguments)) {
+        return res.status(400).json({ error: '`toolArguments` must be an object' });
+      }
+
+      const result = await resolveAndCallTool({ req, user, serverName, toolName, toolArguments });
+      res.json({ success: true, serverName, toolName, result });
+    } catch (error) {
+      if (error?.status === 404) {
+        return res.status(404).json({ error: error.message });
+      }
+      logger.error('[MCP Tool Call] Tool call failed', error);
+      res.status(500).json({ error: error?.message || 'Failed to call MCP tool' });
+    }
+  },
+);
+
+const SUGGEST_MODEL = 'claude-opus-5';
+const OPENAI_SUGGEST_MODEL = 'gpt-5.5';
+const SUGGEST_MAX_TURNS = 10;
+const SUGGEST_RESULT_CHAR_LIMIT = 8000;
+
+const isRealKey = (value) =>
+  typeof value === 'string' && value.length > 0 && value !== 'user_provided';
+
+/** Resolves an Anthropic API key: server-level env var, else the user's stored key */
+async function resolveAnthropicApiKey(userId) {
+  const envKey = process.env.ANTHROPIC_API_KEY;
+  if (isRealKey(envKey)) {
+    return envKey;
+  }
+  try {
+    const values = await db.getUserKeyValues({ userId, name: EModelEndpoint.anthropic });
+    return values?.apiKey;
+  } catch {
+    return undefined;
+  }
+}
+
+async function runAnthropicSuggestLoop({ apiKey, system, userPrompt, executeTool }) {
+  const anthropic = new Anthropic({ apiKey });
+  const messages = [{ role: 'user', content: userPrompt }];
+  let proposal = null;
+
+  for (let turn = 0; turn < SUGGEST_MAX_TURNS && !proposal; turn++) {
+    const response = await anthropic.messages.create({
+      model: SUGGEST_MODEL,
+      max_tokens: 16000,
+      system,
+      tools: suggestTools,
+      messages,
+    });
+    messages.push({ role: 'assistant', content: response.content });
+    if (response.stop_reason !== 'tool_use') {
+      break;
+    }
+
+    const toolResults = [];
+    for (const block of response.content) {
+      if (block.type !== 'tool_use') {
+        continue;
+      }
+      if (block.name === 'propose_views') {
+        proposal = block.input;
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: 'Views received.',
+        });
+        continue;
+      }
+      const { content, isError } = await executeTool(block.input);
+      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content, is_error: isError });
+    }
+    messages.push({ role: 'user', content: toolResults });
+  }
+
+  return proposal;
+}
+
+async function runOpenAISuggestLoop({ system, userPrompt, executeTool }) {
+  const openai = new OpenAI();
+  const tools = suggestTools.map((tool) => ({
+    type: 'function',
+    function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
+  }));
+  const messages = [
+    { role: 'system', content: system },
+    { role: 'user', content: userPrompt },
+  ];
+  let proposal = null;
+
+  for (let turn = 0; turn < SUGGEST_MAX_TURNS && !proposal; turn++) {
+    const completion = await openai.chat.completions.create({
+      model: OPENAI_SUGGEST_MODEL,
+      tools,
+      messages,
+    });
+    const message = completion.choices[0]?.message;
+    if (!message) {
+      break;
+    }
+    messages.push(message);
+
+    const toolCalls = message.tool_calls ?? [];
+    if (toolCalls.length === 0) {
+      break;
+    }
+    for (const call of toolCalls) {
+      let input;
+      try {
+        input = JSON.parse(call.function.arguments || '{}');
+      } catch {
+        input = {};
+      }
+      if (call.function.name === 'propose_views') {
+        proposal = input;
+        messages.push({ role: 'tool', tool_call_id: call.id, content: 'Views received.' });
+        continue;
+      }
+      const { content } = await executeTool(input);
+      messages.push({ role: 'tool', tool_call_id: call.id, content });
+    }
+  }
+
+  return proposal;
+}
+
+const suggestTools = [
+  {
+    name: 'call_mcp_tool',
+    description:
+      "Call a tool on one of the user's MCP data sources and return its result. Use for cheap discovery calls (listing apps, filters, metrics) and to verify the exact arguments you plan to use in a view actually return chartable rows.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        serverName: { type: 'string', description: 'One of the listed data sources' },
+        toolName: { type: 'string', description: 'A tool belonging to that source' },
+        arguments: { type: 'object', description: 'Arguments for the tool' },
+      },
+      required: ['serverName', 'toolName'],
+    },
+  },
+  {
+    name: 'propose_views',
+    description:
+      'Submit the final dashboard views. Call exactly once, only after verifying the arguments return meaningful data.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        notes: { type: 'string', description: 'One or two sentences of insight for the user' },
+        views: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              serverName: { type: 'string' },
+              toolName: { type: 'string' },
+              arguments: { type: 'object' },
+              display: { type: 'string', enum: ['line', 'bar', 'table'] },
+            },
+            required: ['title', 'serverName', 'toolName', 'arguments', 'display'],
+          },
+        },
+      },
+      required: ['views'],
+    },
+  },
+];
+
+const buildSuggestSystemPrompt = (catalog) =>
+  `You are a data analyst embedded in a dashboard builder. Today's date is ${new Date().toISOString().slice(0, 10)}.
+
+The user's data sources (MCP servers) and their tools:
+${catalog}
+
+Workflow:
+1. Explore with call_mcp_tool — discovery first (list apps, filters, available metrics), then verify the exact arguments for each view you plan to propose. Keep exploration lean.
+2. Call propose_views exactly once with 3-6 views.
+
+View rendering rules: each view runs one tool call and charts the first array of records in the result. The x axis is a date/label column and the series are numeric columns. Prefer daily time series (display "line") over single totals; use "bar" for categorical comparisons and "table" only when data is not chartable. Arguments must be exactly valid for the tool — never guess enum values you have not seen.`;
+
+/**
+ * Suggest dashboard views using an LLM that explores the user's MCP sources
+ */
+router.post('/views/suggest', requireJwtAuth, checkMCPUsePermissions, async (req, res) => {
+  try {
+    const user = createSafeUser(req.user);
+    if (!user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { prompt, servers } = req.body ?? {};
+    if (!servers || typeof servers !== 'object' || Array.isArray(servers)) {
+      return res.status(400).json({ error: '`servers` catalog is required' });
+    }
+
+    const catalog = Object.entries(servers)
+      .map(([serverName, server]) => {
+        const tools = (server?.tools ?? [])
+          .map((tool) => `  - ${tool.name}: ${(tool.description || '').slice(0, 300)}`)
+          .join('\n');
+        return `${serverName}:\n${tools}`;
+      })
+      .join('\n');
+
+    const userPrompt =
+      typeof prompt === 'string' && prompt.trim()
+        ? prompt
+        : 'Propose the most meaningful views across my sources.';
+    const system = buildSuggestSystemPrompt(catalog);
+
+    const executeTool = async (input) => {
+      try {
+        const result = await resolveAndCallTool({
+          req,
+          user,
+          serverName: input?.serverName,
+          toolName: input?.toolName,
+          toolArguments: input?.arguments ?? {},
+        });
+        const content =
+          result.length > SUGGEST_RESULT_CHAR_LIMIT
+            ? `${result.slice(0, SUGGEST_RESULT_CHAR_LIMIT)}\n…[truncated]`
+            : result;
+        return { content, isError: false };
+      } catch (error) {
+        return { content: error?.message || 'Tool call failed', isError: true };
+      }
+    };
+
+    const anthropicKey = await resolveAnthropicApiKey(user.id);
+    let proposal = null;
+    if (anthropicKey) {
+      proposal = await runAnthropicSuggestLoop({
+        apiKey: anthropicKey,
+        system,
+        userPrompt,
+        executeTool,
+      });
+    } else if (isRealKey(process.env.OPENAI_API_KEY)) {
+      proposal = await runOpenAISuggestLoop({ system, userPrompt, executeTool });
+    } else {
+      return res.status(400).json({
+        error: 'No LLM API key available. Configure an Anthropic or OpenAI key first.',
+      });
+    }
+
+    if (!proposal || !Array.isArray(proposal.views)) {
+      return res.status(502).json({ error: 'The model did not produce view suggestions' });
+    }
+
+    res.json({ success: true, views: proposal.views, notes: proposal.notes });
+  } catch (error) {
+    logger.error('[MCP Views Suggest] Failed to suggest views', error);
+    res.status(500).json({ error: error?.message || 'Failed to suggest views' });
+  }
+});
 
 /**
  * Get connection status for all MCP servers

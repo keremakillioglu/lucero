@@ -383,6 +383,20 @@ export const getMCPTools = (): Promise<q.MCPServersResponse> => {
   return request.get(endpoints.mcp.tools);
 };
 
+export const callMCPTool = ({
+  serverName,
+  toolName,
+  toolArguments,
+}: q.MCPToolCallParams): Promise<q.MCPToolCallResponse> => {
+  return request.post(endpoints.mcpToolCall(serverName, toolName), { toolArguments });
+};
+
+export const suggestMCPViews = (
+  params: q.MCPViewsSuggestParams,
+): Promise<q.MCPViewsSuggestResponse> => {
+  return request.post(endpoints.mcpViewsSuggest(), params);
+};
+
 export const getVerifyAgentToolAuth = (
   params: q.VerifyToolAuthParams,
 ): Promise<q.VerifyToolAuthResponse> => {
