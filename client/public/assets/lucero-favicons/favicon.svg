@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="512" height="512" role="img" aria-labelledby="t">
+  <title id="t">Lucero favicon</title>
+  <rect x="0" y="0" width="96" height="96" rx="24" fill="#0A1F44"/>
+  <rect x="14" y="58" width="16" height="20" rx="4" fill="#2563EB"/>
+  <rect x="38" y="46" width="16" height="32" rx="4" fill="#3B82F6"/>
+  <rect x="62" y="34" width="16" height="44" rx="4" fill="#60A5FA"/>
+  <path d="M72 6 Q72 17 83 17 Q72 17 72 28 Q72 17 61 17 Q72 17 72 6 Z" fill="#BFDBFE"/>
+</svg>
