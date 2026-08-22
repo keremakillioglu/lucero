@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { X, Play } from 'lucide-react';
-import { cn, Button, Spinner, Dropdown, useToastContext } from '@librechat/client';
+import { Play, Braces, Trash2 } from 'lucide-react';
+import { cn, Button, Spinner, Dropdown, TooltipAnchor, useToastContext } from '@librechat/client';
 import type { MCPServer } from 'librechat-data-provider';
 import type { ViewConfig, ViewDisplay, TableData } from './data';
 import { extractDatasets, buildTable, isTimeLike, MAX_SERIES } from './data';
@@ -63,6 +63,10 @@ export default function ViewCard({ view, servers, onChange, onRemove, autoRun }:
   const { showToast } = useToastContext();
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showArgs, setShowArgs] = useState(() => {
+    const trimmed = view.argsText.trim();
+    return trimmed !== '' && trimmed !== '{}';
+  });
 
   const callTool = useCallMCPToolMutation({
     onSuccess: (data) => {
@@ -189,25 +193,49 @@ export default function ViewCard({ view, servers, onChange, onRemove, autoRun }:
           )}
           {localize('com_ui_mcp_views_run')}
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-9 shrink-0"
-          onClick={() => onRemove(view.id)}
-          aria-label={localize('com_ui_mcp_views_remove')}
-        >
-          <X className="size-4" aria-hidden="true" />
-        </Button>
+        <TooltipAnchor
+          description={localize('com_ui_mcp_views_arguments')}
+          side="bottom"
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('size-9 shrink-0', showArgs && 'bg-surface-tertiary')}
+              onClick={() => setShowArgs((current) => !current)}
+              aria-pressed={showArgs}
+              aria-label={localize('com_ui_mcp_views_arguments')}
+            >
+              <Braces className="size-4" aria-hidden="true" />
+            </Button>
+          }
+        />
+        <TooltipAnchor
+          description={localize('com_ui_mcp_views_remove')}
+          side="bottom"
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0 text-text-secondary hover:bg-surface-secondary hover:text-red-500"
+              onClick={() => onRemove(view.id)}
+              aria-label={localize('com_ui_mcp_views_remove')}
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+            </Button>
+          }
+        />
       </div>
-      <textarea
-        value={view.argsText}
-        onChange={(event) => onChange({ ...view, argsText: event.target.value })}
-        rows={2}
-        spellCheck={false}
-        aria-label={localize('com_ui_mcp_views_arguments')}
-        placeholder={localize('com_ui_mcp_views_arguments')}
-        className="w-full resize-y rounded-lg border border-border-light bg-surface-primary p-2 font-mono text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary"
-      />
+      {showArgs && (
+        <textarea
+          value={view.argsText}
+          onChange={(event) => onChange({ ...view, argsText: event.target.value })}
+          rows={2}
+          spellCheck={false}
+          aria-label={localize('com_ui_mcp_views_arguments')}
+          placeholder={localize('com_ui_mcp_views_arguments')}
+          className="w-full resize-y rounded-lg border border-border-light bg-surface-primary p-2 font-mono text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary"
+        />
+      )}
       {error != null && (
         <p className="whitespace-pre-wrap break-words text-xs text-red-500">{error}</p>
       )}

@@ -171,7 +171,7 @@ function ExpandedPanel({
           <NavIconButton
             key={link.id}
             link={link}
-            isActive={link.id === effectiveActive}
+            isActive={link.isActive ?? link.id === effectiveActive}
             expanded={expanded ?? true}
             setActive={setActive}
             onExpand={onExpand}

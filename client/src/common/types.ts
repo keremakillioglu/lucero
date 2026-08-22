@@ -132,6 +132,8 @@ export type NavLink = {
   onClick?: (e?: React.MouseEvent) => void;
   variant?: 'default' | 'ghost';
   id: string;
+  /** Overrides active-panel matching for links that navigate instead of opening a panel */
+  isActive?: boolean;
 };
 
 export interface DataColumnMeta {
