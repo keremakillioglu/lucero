@@ -28,6 +28,7 @@ import {
   useHasAccess,
 } from '~/hooks';
 import MCPBuilderPanel from '~/components/SidePanel/MCPBuilder/MCPBuilderPanel';
+import ViewsSidePanel from '~/components/Views/SidePanel';
 import AgentPanelSwitch from '~/components/SidePanel/Agents/AgentPanelSwitch';
 import BookmarkPanel from '~/components/SidePanel/Bookmarks/BookmarkPanel';
 import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
@@ -217,7 +218,7 @@ export default function useSideNavLinks({
         label: '',
         icon: LayoutDashboard,
         id: 'mcp-views',
-        isActive: onViewsPage,
+        Component: ViewsSidePanel,
         onClick: () => {
           if (!onViewsPage) {
             navigate('/views');

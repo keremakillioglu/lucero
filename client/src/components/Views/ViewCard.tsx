@@ -139,7 +139,10 @@ export default function ViewCard({ view, servers, onChange, onRemove, autoRun }:
   }, [autoRun, view.toolName, handleRun]);
 
   return (
-    <div className="viz-root flex flex-col gap-3 rounded-xl border border-border-light bg-surface-primary p-4">
+    <div
+      id={`view-card-${view.id}`}
+      className="viz-root flex flex-col gap-3 rounded-xl border border-border-light bg-surface-primary p-4"
+    >
       {view.title != null && view.title !== '' && (
         <h2 className="text-sm font-semibold text-text-primary">{view.title}</h2>
       )}

@@ -1,3 +1,5 @@
+import type { MCPServer } from 'librechat-data-provider';
+
 export type CellValue = string | number | boolean | null;
 export type DataRow = Record<string, CellValue>;
 
@@ -149,3 +151,25 @@ export function buildTable(rows: DataRow[], xOverride?: string, yOverride?: stri
 
 export const formatCompact = (value: number): string =>
   new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+
+export const createViewConfig = (servers: Array<[string, MCPServer]>): ViewConfig => {
+  const [serverName, server] = servers[0] ?? ['', undefined];
+  return {
+    id: crypto.randomUUID(),
+    serverName,
+    toolName: server?.tools[0]?.name ?? '',
+    argsText: '{}',
+    display: 'auto',
+  };
+};
+
+export const viewLabel = (view: ViewConfig): string =>
+  view.title?.trim() || `${view.serverName} · ${view.toolName}`;
+
+export function focusViewCard(id: string): void {
+  setTimeout(() => {
+    document
+      .getElementById(`view-card-${id}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 150);
+}

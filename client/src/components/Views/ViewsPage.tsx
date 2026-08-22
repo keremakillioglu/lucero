@@ -1,33 +1,21 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
+import { useRecoilState } from 'recoil';
 import { Plus, Sparkles, LayoutDashboard } from 'lucide-react';
 import { Button, Spinner, useToastContext } from '@librechat/client';
 import type { MCPViewsSuggestParams } from 'librechat-data-provider';
 import type { ViewConfig } from './data';
 import { useMCPToolsQuery, useSuggestMCPViewsMutation } from '~/data-provider';
+import { createViewConfig } from './data';
 import { useLocalize } from '~/hooks';
+import { viewsState } from './store';
 import ViewCard from './ViewCard';
 import './views.css';
-
-const STORAGE_KEY = 'mcp-views:v1';
-
-function loadViews(): ViewConfig[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-    const parsed: unknown = JSON.parse(stored);
-    return Array.isArray(parsed) ? (parsed as ViewConfig[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 export default function ViewsPage() {
   const localize = useLocalize();
   const { showToast } = useToastContext();
   const { data } = useMCPToolsQuery();
-  const [views, setViews] = useState<ViewConfig[]>(loadViews);
+  const [views, setViews] = useRecoilState(viewsState);
   const [suggestPrompt, setSuggestPrompt] = useState('');
   const [suggestNotes, setSuggestNotes] = useState('');
   const [autoRunIds, setAutoRunIds] = useState<Set<string>>(new Set());
@@ -66,26 +54,9 @@ export default function ViewsPage() {
     suggestViews.mutate({ prompt: suggestPrompt.trim() || undefined, servers: catalog });
   };
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(views));
-    } catch {
-      // localStorage may be unavailable; views simply won't persist
-    }
-  }, [views]);
-
   const addView = () => {
-    const [serverName, server] = servers[0] ?? ['', undefined];
-    setViews((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        serverName,
-        toolName: server?.tools[0]?.name ?? '',
-        argsText: '{}',
-        display: 'auto',
-      },
-    ]);
+    const view = createViewConfig(servers);
+    setViews((current) => [...current, view]);
   };
 
   const updateView = (updated: ViewConfig) =>
