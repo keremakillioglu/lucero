@@ -162,14 +162,3 @@ export const createViewConfig = (servers: Array<[string, MCPServer]>): ViewConfi
     display: 'auto',
   };
 };
-
-export const viewLabel = (view: ViewConfig): string =>
-  view.title?.trim() || `${view.serverName} · ${view.toolName}`;
-
-export function focusViewCard(id: string): void {
-  setTimeout(() => {
-    document
-      .getElementById(`view-card-${id}`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 150);
-}
