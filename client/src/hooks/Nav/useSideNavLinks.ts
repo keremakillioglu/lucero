@@ -218,7 +218,11 @@ export default function useSideNavLinks({
         icon: LayoutDashboard,
         id: 'mcp-views',
         isActive: onViewsPage,
-        onClick: () => navigate(onViewsPage ? '/c/new' : '/views'),
+        onClick: () => {
+          if (!onViewsPage) {
+            navigate('/views');
+          }
+        },
       });
     }
 
