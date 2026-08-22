@@ -82,7 +82,14 @@ const NavIconButton = memo(function NavIconButton({
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       if (link.onClick) {
+        if (isActive && expanded) {
+          onCollapse?.();
+          return;
+        }
         link.onClick(e);
+        if (!expanded) {
+          onExpand?.();
+        }
         return;
       }
       if (isActive && expanded) {
