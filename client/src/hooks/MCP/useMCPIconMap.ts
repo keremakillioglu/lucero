@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { useMCPServersQuery } from '~/data-provider';
 
-export function useMCPIconMap(): Map<string, string> {
+type DisplayField = 'iconPath' | 'title';
+
+/** Maps each MCP server name to one of its configured display fields */
+function useMCPServerFieldMap(field: DisplayField): Map<string, string> {
   const { data: servers } = useMCPServersQuery();
 
   return useMemo(() => {
@@ -10,10 +13,19 @@ export function useMCPIconMap(): Map<string, string> {
       return map;
     }
     for (const [serverName, config] of Object.entries(servers)) {
-      if (config.iconPath) {
-        map.set(serverName, config.iconPath);
+      const value = config[field];
+      if (value) {
+        map.set(serverName, value);
       }
     }
     return map;
-  }, [servers]);
+  }, [servers, field]);
+}
+
+export function useMCPIconMap(): Map<string, string> {
+  return useMCPServerFieldMap('iconPath');
+}
+
+export function useMCPTitleMap(): Map<string, string> {
+  return useMCPServerFieldMap('title');
 }

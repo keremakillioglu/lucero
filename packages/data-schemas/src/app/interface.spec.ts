@@ -27,6 +27,17 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.autoSubmitFromUrl).toBe(false);
   });
 
+  it('leaves the tools menu visible unless it is configured off', async () => {
+    const shown = await loadDefaultInterface({ config: {}, configDefaults: getConfigDefaults() });
+    expect(shown?.toolsMenu).toBeUndefined();
+
+    const hidden = await loadDefaultInterface({
+      config: { interface: { toolsMenu: false } },
+      configDefaults: getConfigDefaults(),
+    });
+    expect(hidden?.toolsMenu).toBe(false);
+  });
+
   it('preserves a disabled build info flag', async () => {
     const config: Partial<TCustomConfig> = {
       interface: {

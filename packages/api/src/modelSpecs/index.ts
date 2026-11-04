@@ -126,6 +126,13 @@ export function findModelSpecByName(
   return modelSpecs?.list?.find((modelSpec) => modelSpec.name === spec);
 }
 
+/** The spec new conversations start with: the one flagged `default`, else the first listed */
+export function getDefaultModelSpec(
+  modelSpecs: { list?: TModelSpec[] } | undefined,
+): TModelSpec | undefined {
+  return modelSpecs?.list?.find((modelSpec) => modelSpec.default) ?? modelSpecs?.list?.[0];
+}
+
 export function isModelSpecEndpointMatch(
   modelSpec: Pick<TModelSpec, 'preset'> | undefined,
   endpoint: string | null | undefined,

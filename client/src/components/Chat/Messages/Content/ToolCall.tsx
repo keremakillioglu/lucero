@@ -11,7 +11,8 @@ import {
 import type { TAttachment } from 'librechat-data-provider';
 import { useLocalize, useProgress, useExpandCollapse } from '~/hooks';
 import { ToolIcon, getToolIconType, isError } from './ToolOutput';
-import { useMCPIconMap } from '~/hooks/MCP';
+import { useMCPIconMap, useMCPTitleMap } from '~/hooks/MCP';
+import { getToolLabel } from './toolLabels';
 import { AttachmentGroup } from './Parts';
 import ToolCallInfo from './ToolCallInfo';
 import ProgressText from './ProgressText';
@@ -107,7 +108,12 @@ export default function ToolCall({
 
   const toolIconType = useMemo(() => getToolIconType(name), [name]);
   const mcpIconMap = useMCPIconMap();
+  const mcpTitleMap = useMCPTitleMap();
   const mcpIconUrl = isMCPToolCall ? mcpIconMap.get(mcpServerName) : undefined;
+  const friendlyLabel = isMCPToolCall ? getToolLabel(mcpServerName, function_name) : undefined;
+  const friendlyText = friendlyLabel
+    ? localize(friendlyLabel.key, friendlyLabel.values)
+    : undefined;
 
   const actionId = useMemo(() => {
     if (isMCPToolCall || !parsedAuthUrl) {
@@ -176,18 +182,24 @@ export default function ToolCall({
   }, [onExpand]);
 
   const subtitle = useMemo(() => {
+    if (friendlyText != null) {
+      return undefined;
+    }
     if (isMCPToolCall && mcpServerName) {
-      return localize('com_ui_via_server', { 0: mcpServerName });
+      return localize('com_ui_via_server', { 0: mcpTitleMap.get(mcpServerName) ?? mcpServerName });
     }
     if (domain && domain.length !== Constants.ENCODED_DOMAIN_LENGTH) {
       return localize('com_ui_via_server', { 0: domain });
     }
     return undefined;
-  }, [isMCPToolCall, mcpServerName, domain, localize]);
+  }, [friendlyText, isMCPToolCall, mcpServerName, mcpTitleMap, domain, localize]);
 
   const getFinishedText = () => {
     if (cancelled) {
       return localize('com_ui_cancelled');
+    }
+    if (friendlyText != null) {
+      return friendlyText;
     }
     if (isMCPToolCall === true) {
       return localize('com_assistants_completed_function', { 0: function_name });
@@ -198,6 +210,12 @@ export default function ToolCall({
     return localize('com_assistants_completed_function', { 0: function_name });
   };
 
+  const runningText =
+    friendlyText ??
+    (function_name
+      ? localize('com_assistants_running_var', { 0: function_name })
+      : localize('com_assistants_running_action'));
+
   if (!isLast && (!function_name || function_name.length === 0) && !output) {
     return null;
   }
@@ -207,9 +225,7 @@ export default function ToolCall({
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {(() => {
           if (progress < 1 && !showCancelled) {
-            return function_name
-              ? localize('com_assistants_running_var', { 0: function_name })
-              : localize('com_assistants_running_action');
+            return runningText;
           }
           return getFinishedText();
         })()}
@@ -218,11 +234,7 @@ export default function ToolCall({
         <ProgressText
           progress={progress}
           onClick={handleToggleInfo}
-          inProgressText={
-            function_name
-              ? localize('com_assistants_running_var', { 0: function_name })
-              : localize('com_assistants_running_action')
-          }
+          inProgressText={runningText}
           authText={
             !showCancelled && authDomain.length > 0 ? localize('com_ui_requires_auth') : undefined
           }

@@ -19,6 +19,9 @@ jest.mock('~/hooks', () => ({
       com_assistants_allow_sites_you_trust: 'Only allow sites you trust',
       com_ui_via_server: `via ${values?.[0]}`,
       com_ui_tool_failed: 'failed',
+      com_ui_tool_finding_data: 'Finding the right data…',
+      com_ui_tool_checking_definitions: 'Checking definitions…',
+      com_ui_tool_fetching_live: `Fetching today's numbers from ${values?.[0]}`,
     };
     return translations[key] || key;
   },
@@ -33,8 +36,11 @@ jest.mock('~/hooks', () => ({
   }),
 }));
 
+const mockTitleMap = new Map<string, string>();
+
 jest.mock('~/hooks/MCP', () => ({
   useMCPIconMap: () => new Map(),
+  useMCPTitleMap: () => mockTitleMap,
 }));
 
 jest.mock('~/components/Chat/Messages/Content/MessageContent', () => ({
@@ -390,6 +396,29 @@ describe('ToolCall', () => {
 
       const attachmentGroup = screen.getByTestId('attachment-group');
       expect(JSON.parse(attachmentGroup.textContent!)).toEqual(complexAttachments);
+    });
+  });
+
+  describe('data tool labels', () => {
+    const d = Constants.mcp_delimiter;
+
+    afterEach(() => mockTitleMap.clear());
+
+    it.each([
+      [`search_models${d}warehouse`, 'Finding the right data…'],
+      [`get_model${d}warehouse`, 'Checking definitions…'],
+      [`run_report${d}adjust-reports`, "Fetching today's numbers from Adjust"],
+    ])('should show a plain-language label without a server subtitle for %s', (name, label) => {
+      renderWithRecoil(<ToolCall {...mockProps} name={name} />);
+      expect(screen.getByTestId('progress-text').textContent).toBe(label);
+      expect(screen.queryByTestId('subtitle')).not.toBeInTheDocument();
+    });
+
+    it('should name other tools by their server title when one is configured', () => {
+      mockTitleMap.set('appstore-sales', 'App Store Live');
+      renderWithRecoil(<ToolCall {...mockProps} name={`sales_report${d}appstore-sales`} />);
+      expect(screen.getByTestId('progress-text').textContent).toContain('Completed sales_report');
+      expect(screen.getByTestId('subtitle').textContent).toBe('via App Store Live');
     });
   });
 

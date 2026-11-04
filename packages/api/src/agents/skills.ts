@@ -230,6 +230,22 @@ export async function resolveModelSpecSkillIds({
   });
 }
 
+/**
+ * Resolves the skills toggle for a model-spec (ephemeral) chat. An explicit per-conversation
+ * choice wins; otherwise `interface.skills.alwaysOn` turns skills on regardless of which model
+ * spec is selected.
+ */
+export function resolveEphemeralSkillsToggle(
+  requested: unknown,
+  interfaceConfig?: { skills?: boolean | { alwaysOn?: boolean } },
+): boolean {
+  if (typeof requested === 'boolean') {
+    return requested;
+  }
+  const skills = interfaceConfig?.skills;
+  return typeof skills === 'object' && skills.alwaysOn === true;
+}
+
 export interface ResolveAgentScopedSkillIdsParams {
   /** Agent being initialized. Reads `id`, `skills`, and `skills_enabled`. */
   agent: Pick<Agent, 'id' | 'skills' | 'skills_enabled'>;

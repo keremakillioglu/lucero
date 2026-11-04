@@ -15,6 +15,7 @@ const {
   resolveAgentScopedSkillIds,
   resolveModelSpecSkillIds,
   buildAgentContextAttachmentsByAgentId,
+  resolveEphemeralSkillsToggle,
 } = require('@librechat/api');
 const {
   Permissions,
@@ -149,7 +150,10 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
   const enabledCapabilities = new Set(appConfig?.endpoints?.[EModelEndpoint.agents]?.capabilities);
   const skillsCapabilityEnabled = enabledCapabilities.has(AgentCapabilities.skills);
   const codeEnvAvailable = enabledCapabilities.has(AgentCapabilities.execute_code);
-  const ephemeralSkillsToggle = req.body?.ephemeralAgent?.skills === true;
+  const ephemeralSkillsToggle = resolveEphemeralSkillsToggle(
+    req.body?.ephemeralAgent?.skills,
+    req.config?.interfaceConfig,
+  );
   const skillDbMethods = getSkillDbMethods();
 
   /** Run-level gate for inline memory tools: the `memory` capability must be

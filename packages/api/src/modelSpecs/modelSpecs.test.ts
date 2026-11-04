@@ -3,6 +3,7 @@ import type { TModelSpec } from 'librechat-data-provider';
 import {
   applyModelSpecPreset,
   findModelSpecByName,
+  getDefaultModelSpec,
   isModelSpecEndpointMatch,
   resolveModelSpecPromptPrefixVariables,
   sanitizeModelSpecs,
@@ -189,5 +190,15 @@ describe('modelSpecs helpers', () => {
         name: 'Ada',
       } as never).promptPrefix,
     ).toBe('Help Ada.');
+  });
+
+  it('should resolve the default model spec, falling back to the first listed', () => {
+    const first = { name: 'first', label: 'First', preset: { endpoint: EModelEndpoint.google } };
+    const flagged = { ...first, name: 'flagged', default: true };
+
+    expect(getDefaultModelSpec({ list: [first, flagged] as TModelSpec[] })?.name).toBe('flagged');
+    expect(getDefaultModelSpec({ list: [first] as TModelSpec[] })?.name).toBe('first');
+    expect(getDefaultModelSpec({ list: [] })).toBeUndefined();
+    expect(getDefaultModelSpec(undefined)).toBeUndefined();
   });
 });

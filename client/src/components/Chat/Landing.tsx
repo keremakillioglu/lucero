@@ -61,7 +61,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
     });
   }, [conversation?.endpoint, conversation?.iconURL, endpointsConfig]);
 
-  const { entity, isAgent, isAssistant } = getEntity({
+  const { entity, isAgent } = getEntity({
     endpoint: endpointType,
     agentsMap,
     assistantMap,
@@ -173,28 +173,32 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
         <div
           className={`flex ${textHasMultipleLines ? 'flex-col' : 'flex-col md:flex-row'} items-center justify-center gap-2`}
         >
-          <div className={`relative size-10 justify-center ${textHasMultipleLines ? 'mb-2' : ''}`}>
-            <ConvoIcon
-              agentsMap={agentsMap}
-              assistantMap={assistantMap}
-              conversation={conversation}
-              endpointsConfig={endpointsConfig}
-              containerClassName={containerClassName}
-              context="landing"
-              className="h-2/3 w-2/3 text-black dark:text-white"
-              size={41}
-            />
-            {startupConfig?.showBirthdayIcon && (
-              <TooltipAnchor
-                className="absolute bottom-[27px] right-2"
-                description={localize('com_ui_happy_birthday')}
-                aria-label={localize('com_ui_happy_birthday')}
-              >
-                <BirthdayIcon />
-              </TooltipAnchor>
-            )}
-          </div>
-          {((isAgent || isAssistant) && name) || name ? (
+          {name && (
+            <div
+              className={`relative size-10 justify-center ${textHasMultipleLines ? 'mb-2' : ''}`}
+            >
+              <ConvoIcon
+                agentsMap={agentsMap}
+                assistantMap={assistantMap}
+                conversation={conversation}
+                endpointsConfig={endpointsConfig}
+                containerClassName={containerClassName}
+                context="landing"
+                className="h-2/3 w-2/3 text-black dark:text-white"
+                size={41}
+              />
+              {startupConfig?.showBirthdayIcon && (
+                <TooltipAnchor
+                  className="absolute bottom-[27px] right-2"
+                  description={localize('com_ui_happy_birthday')}
+                  aria-label={localize('com_ui_happy_birthday')}
+                >
+                  <BirthdayIcon />
+                </TooltipAnchor>
+              )}
+            </div>
+          )}
+          {name ? (
             <div className="flex flex-col items-center gap-0 p-2">
               <SplitText
                 key={`split-text-${name}`}

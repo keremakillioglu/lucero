@@ -16,6 +16,7 @@ import CodeInterpreter from './CodeInterpreter';
 import { BadgeRowProvider } from '~/Providers';
 import ToolsDropdown from './ToolsDropdown';
 import { useChatBadges } from '~/hooks';
+import { useGetStartupConfig } from '~/data-provider';
 import ToolDialogs from './ToolDialogs';
 import FileSearch from './FileSearch';
 import Artifacts from './Artifacts';
@@ -151,6 +152,8 @@ function BadgeRow({
   onToggle,
   isInChat,
 }: BadgeRowProps) {
+  const { data: startupConfig } = useGetStartupConfig();
+  const showToolsMenu = startupConfig?.interface?.toolsMenu !== false;
   const [orderedBadges, setOrderedBadges] = useState<BadgeItem[]>([]);
   const [dragState, dispatch] = useReducer(dragReducer, {
     draggedBadge: null,
@@ -330,7 +333,7 @@ function BadgeRow({
       isSubmitting={isSubmitting}
     >
       <div ref={containerRef} className="relative flex flex-wrap items-center gap-2">
-        {showEphemeralBadges === true && <ToolsDropdown />}
+        {showEphemeralBadges === true && showToolsMenu && <ToolsDropdown />}
         {tempBadges.map((badge, index) => (
           <React.Fragment key={badge.id}>
             {dragState.draggedBadge && dragState.insertIndex === index && ghostBadge && (

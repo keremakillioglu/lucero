@@ -1291,6 +1291,8 @@ export const interfaceSchema = z
     customWelcome: z.string().optional(),
     mcpServers: mcpServersSchema.optional(),
     modelSelect: z.boolean().optional(),
+    /** Shows the chat input's tools menu (web search, code, artifacts, file search, ...) */
+    toolsMenu: z.boolean().optional(),
     parameters: z.boolean().optional(),
     multiConvo: z.boolean().optional(),
     bookmarks: z.boolean().optional(),
@@ -1367,6 +1369,8 @@ export const interfaceSchema = z
           share: z.boolean().optional(),
           public: z.boolean().optional(),
           defaultActiveOnShare: z.boolean().optional(),
+          /** Turns skills on for every model-spec chat, independent of the selected model */
+          alwaysOn: z.boolean().optional(),
         }),
       ])
       .optional(),
@@ -2903,3 +2907,6 @@ export function getDefaultParamsEndpoint(
   }
   return endpointsConfig[endpoint]?.customParams?.defaultParamsEndpoint;
 }
+
+/** Prompt used by Views AI Suggest when the user leaves the prompt empty */
+export const MCP_VIEWS_DEFAULT_PROMPT = 'Propose the most meaningful views across my sources.';

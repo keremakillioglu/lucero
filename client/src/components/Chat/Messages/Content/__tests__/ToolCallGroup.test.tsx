@@ -28,6 +28,7 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/hooks/MCP', () => ({
   useMCPIconMap: () => new Map(),
+  useMCPTitleMap: () => new Map(),
 }));
 
 jest.mock('../ToolOutput', () => ({

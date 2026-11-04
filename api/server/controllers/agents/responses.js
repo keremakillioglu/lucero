@@ -46,6 +46,7 @@ const {
   sendResponsesErrorResponse,
   createResponsesEventHandlers,
   createAggregatorEventHandlers,
+  resolveEphemeralSkillsToggle,
 } = require('@librechat/api');
 const {
   createResponsesToolEndCallback,
@@ -393,7 +394,10 @@ const createResponse = async (req, res) => {
       appConfig?.endpoints?.[EModelEndpoint.agents]?.capabilities,
     );
     const skillsCapabilityEnabled = enabledCapabilities.has(AgentCapabilities.skills);
-    const ephemeralSkillsToggle = req.body?.ephemeralAgent?.skills === true;
+    const ephemeralSkillsToggle = resolveEphemeralSkillsToggle(
+      req.body?.ephemeralAgent?.skills,
+      req.config?.interfaceConfig,
+    );
     const accessibleSkillIds = skillsCapabilityEnabled
       ? withDeploymentSkillIds(
           await findAccessibleResources({

@@ -35,6 +35,7 @@ const {
   resolveAgentScopedSkillIds,
   createOpenAIContentAggregator,
   isChatCompletionValidationFailure,
+  resolveEphemeralSkillsToggle,
 } = require('@librechat/api');
 const {
   buildSummarizationHandlers,
@@ -269,7 +270,10 @@ const OpenAIChatCompletionController = async (req, res) => {
 
     const enabledCapabilities = new Set(agentsEConfig?.capabilities);
     const skillsCapabilityEnabled = enabledCapabilities.has(AgentCapabilities.skills);
-    const ephemeralSkillsToggle = req.body?.ephemeralAgent?.skills === true;
+    const ephemeralSkillsToggle = resolveEphemeralSkillsToggle(
+      req.body?.ephemeralAgent?.skills,
+      req.config?.interfaceConfig,
+    );
     const accessibleSkillIds = skillsCapabilityEnabled
       ? withDeploymentSkillIds(
           await findAccessibleResources({

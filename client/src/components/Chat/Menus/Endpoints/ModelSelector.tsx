@@ -18,7 +18,7 @@ import { useLocalize } from '~/hooks';
 
 const defaultInterface = getConfigDefaults().interface;
 
-function ModelSelectorContent() {
+function ModelSelectorContent({ locked = false }: { locked?: boolean }) {
   const localize = useLocalize();
   const modelSelectorHint = useShortcutHint('openModelSelector', localize('com_ui_select_model'));
   const modelSelectorAriaKey = useShortcutAriaKey('openModelSelector');
@@ -64,6 +64,30 @@ function ModelSelectorContent() {
     [localize, agentsMap, modelSpecs, selectedValues, mappedEndpoints],
   );
 
+  const label = (
+    <>
+      {selectedIcon && React.isValidElement(selectedIcon) && (
+        <div className="flex flex-shrink-0 items-center justify-center overflow-hidden">
+          {selectedIcon}
+        </div>
+      )}
+      <span className="flex-grow truncate text-left">{selectedDisplayValue}</span>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <div className="relative flex w-full max-w-md flex-col items-center gap-2">
+        <div
+          data-testid="model-selector-label"
+          className="my-1 flex h-9 w-full max-w-[70vw] cursor-default select-none items-center justify-center gap-2 rounded-xl border border-border-light bg-presentation px-3 py-2 text-sm text-text-primary"
+        >
+          {label}
+        </div>
+      </div>
+    );
+  }
+
   const trigger = (
     <TooltipAnchor
       aria-label={localize('com_ui_select_model')}
@@ -75,12 +99,7 @@ function ModelSelectorContent() {
           className="my-1 flex h-9 w-full max-w-[70vw] items-center justify-center gap-2 rounded-xl border border-border-light bg-presentation px-3 py-2 text-sm text-text-primary hover:bg-surface-active-alt"
           aria-label={localize('com_ui_select_model')}
         >
-          {selectedIcon && React.isValidElement(selectedIcon) && (
-            <div className="flex flex-shrink-0 items-center justify-center overflow-hidden">
-              {selectedIcon}
-            </div>
-          )}
-          <span className="flex-grow truncate text-left">{selectedDisplayValue}</span>
+          {label}
         </button>
       }
     />
@@ -140,7 +159,9 @@ export default function ModelSelector({ startupConfig }: ModelSelectorProps) {
   return (
     <ModelSelectorChatProvider>
       <ModelSelectorProvider startupConfig={startupConfig}>
-        <ModelSelectorContent />
+        <ModelSelectorContent
+          locked={interfaceConfig.modelSelect === false && modelSpecs.length === 1}
+        />
       </ModelSelectorProvider>
     </ModelSelectorChatProvider>
   );

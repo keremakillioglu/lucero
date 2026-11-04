@@ -57,19 +57,6 @@ export const useCallMCPToolMutation = (options?: {
 };
 
 /**
- * Hook for LLM-suggested dashboard views over the user's MCP sources
- */
-export const useSuggestMCPViewsMutation = (options?: {
-  onSuccess?: (data: t.MCPViewsSuggestResponse, variables: t.MCPViewsSuggestParams) => void;
-  onError?: (error: Error, variables: t.MCPViewsSuggestParams) => void;
-}): UseMutationResult<t.MCPViewsSuggestResponse, Error, t.MCPViewsSuggestParams> => {
-  return useMutation((params: t.MCPViewsSuggestParams) => dataService.suggestMCPViews(params), {
-    onSuccess: (data, variables) => options?.onSuccess?.(data, variables),
-    onError: (error, variables) => options?.onError?.(error, variables),
-  });
-};
-
-/**
  * Hook for updating an existing MCP server
  */
 export const useUpdateMCPServerMutation = (options?: {

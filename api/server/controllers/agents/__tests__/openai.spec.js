@@ -78,6 +78,7 @@ jest.mock('@librechat/agents', () => ({
 }));
 
 jest.mock('@librechat/api', () => ({
+  resolveEphemeralSkillsToggle: (requested) => requested === true,
   writeSSE: jest.fn(),
   createRun: jest.fn().mockResolvedValue({
     processStream: mockProcessStream,
