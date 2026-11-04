@@ -18,6 +18,8 @@ const CONNECT_CONCURRENCY = 3;
  */
 export class ConnectionsRepository {
   protected connections: Map<string, MCPConnection> = new Map();
+  /** In-flight `get` per server, so a burst of concurrent callers shares one connection attempt */
+  private pendingGets: Map<string, Promise<MCPConnection | null>> = new Map();
   protected oauthOpts: t.OAuthConnectionOptions | undefined;
   private readonly ownerId: string | undefined;
 
@@ -42,8 +44,28 @@ export class ConnectionsRepository {
     return canConnect;
   }
 
-  /** Gets or creates a connection for the specified server with lazy loading */
+  /**
+   * Gets or creates a connection for the specified server with lazy loading. Concurrent calls for
+   * the same server join the in-flight attempt: without this, a burst of tool calls arriving while
+   * no connection exists would each open its own connection and trip the reconnect circuit breaker.
+   */
   async get(serverName: string): Promise<MCPConnection | null> {
+    const pending = this.pendingGets.get(serverName);
+    if (pending) {
+      return pending;
+    }
+    const attempt = this.getOrCreate(serverName);
+    this.pendingGets.set(serverName, attempt);
+    try {
+      return await attempt;
+    } finally {
+      if (this.pendingGets.get(serverName) === attempt) {
+        this.pendingGets.delete(serverName);
+      }
+    }
+  }
+
+  private async getOrCreate(serverName: string): Promise<MCPConnection | null> {
     const serverConfig = await MCPServersRegistry.getInstance().getServerConfig(
       serverName,
       this.ownerId,

@@ -129,6 +129,25 @@ describe('ConnectionsRepository', () => {
       expect(repository['connections'].get('server1')).toBe(mockConnection);
     });
 
+    it('should share one connection attempt across concurrent callers', async () => {
+      (MCPConnectionFactory.create as jest.Mock).mockImplementation(
+        () => new Promise<MCPConnection>((resolve) => setImmediate(() => resolve(mockConnection))),
+      );
+
+      const results = await Promise.all([
+        repository.get('server1'),
+        repository.get('server1'),
+        repository.get('server1'),
+      ]);
+
+      expect(MCPConnectionFactory.create).toHaveBeenCalledTimes(1);
+      expect(results).toEqual([mockConnection, mockConnection, mockConnection]);
+      expect(repository['connections'].get('server1')).toBe(mockConnection);
+
+      expect(await repository.get('server1')).toBe(mockConnection);
+      expect(MCPConnectionFactory.create).toHaveBeenCalledTimes(1);
+    });
+
     it('should create new connection if existing connection is not connected', async () => {
       const oldConnection = {
         isConnected: jest.fn().mockResolvedValue(false),
