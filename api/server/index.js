@@ -505,21 +505,11 @@ const startServer = async () => {
 
   configureGenerationStreams();
 
-  /**
-   * Cloudflare Tunnel pools keep-alive connections to the origin for 90s, while Node drops idle
-   * ones after 5s by default; a request reusing a connection at that moment is met with an EOF
-   * and surfaces to the user as a 502. Outlive the proxy's idle timeout instead.
-   */
-  const KEEP_ALIVE_TIMEOUT_MS = 95_000;
-
   const server = app.listen(port, host, async (err) => {
     if (err) {
       logger.error('Failed to start server:', err);
       process.exit(1);
     }
-
-    server.keepAliveTimeout = KEEP_ALIVE_TIMEOUT_MS;
-    server.headersTimeout = KEEP_ALIVE_TIMEOUT_MS + 1_000;
 
     if (host === '0.0.0.0') {
       logger.info(
