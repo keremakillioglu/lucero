@@ -8,6 +8,7 @@ const mockSetOpenIDAuthTokens = jest.fn();
 const mockGetLogStores = jest.fn();
 const mockCheckBan = jest.fn();
 const mockGenerateToken = jest.fn();
+const mockRefreshDashboardOnLogin = jest.fn();
 const mockLogger = { info: jest.fn(), error: jest.fn() };
 
 jest.mock('librechat-data-provider', () => ({
@@ -33,6 +34,10 @@ jest.mock('~/server/services/PermissionService', () => ({
 jest.mock('~/server/services/AuthService', () => ({
   setAuthTokens: (...args) => mockSetAuthTokens(...args),
   setOpenIDAuthTokens: (...args) => mockSetOpenIDAuthTokens(...args),
+}));
+
+jest.mock('~/server/services/Views/snapshots', () => ({
+  refreshDashboardOnLogin: (...args) => mockRefreshDashboardOnLogin(...args),
 }));
 
 jest.mock(
@@ -120,6 +125,24 @@ describe('createOAuthHandler', () => {
     );
     expect(mockSetOpenIDAuthTokens).not.toHaveBeenCalled();
     expect(mockSetAuthTokens).not.toHaveBeenCalled();
+    expect(mockRefreshDashboardOnLogin).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('sets cookies, refreshes the dashboard and redirects on a standard sign-in', async () => {
+    mockIsAdminPanelRedirect.mockReturnValue(false);
+    const handler = createOAuthHandler('http://localhost:3080/c/new');
+    const req = buildReq({
+      user: { _id: 'user-123', email: 'user@example.com', provider: 'google' },
+    });
+    const res = buildRes();
+    const next = jest.fn();
+
+    await handler(req, res, next);
+
+    expect(mockSetAuthTokens).toHaveBeenCalledWith('user-123', res, null, req);
+    expect(mockRefreshDashboardOnLogin).toHaveBeenCalledWith(req, req.user);
+    expect(res.redirect).toHaveBeenCalledWith('http://localhost:3080/c/new');
     expect(next).not.toHaveBeenCalled();
   });
 

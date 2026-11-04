@@ -391,11 +391,25 @@ export const callMCPTool = ({
   return request.post(endpoints.mcpToolCall(serverName, toolName), { toolArguments });
 };
 
-export const suggestMCPViews = (
-  params: q.MCPViewsSuggestParams,
-): Promise<q.MCPViewsSuggestResponse> => {
-  return request.post(endpoints.mcpViewsSuggest(), params);
-};
+export const getSavedViews = (): Promise<q.TSavedView[]> => request.get(endpoints.savedViews());
+
+export const createSavedView = (input: q.TSavedViewInput): Promise<q.TSavedView> =>
+  request.post(endpoints.savedViews(), input);
+
+export const updateSavedView = ({ id, ...changes }: q.TSavedViewUpdate): Promise<q.TSavedView> =>
+  request.patch(endpoints.savedView(id), changes);
+
+export const deleteSavedView = (id: string): Promise<{ deleted: boolean }> =>
+  request.delete(endpoints.savedView(id));
+
+export const getViewsDashboard = (): Promise<q.TViewsDashboard> =>
+  request.get(endpoints.viewsDashboard());
+
+export const updateViewsDashboard = (dashboard: q.TViewsDashboard): Promise<q.TViewsDashboard> =>
+  request.put(endpoints.viewsDashboard(), dashboard);
+
+export const refreshViewsDashboard = (): Promise<q.TViewsDashboard> =>
+  request.post(endpoints.viewsDashboardRefresh(), {});
 
 export const getVerifyAgentToolAuth = (
   params: q.VerifyToolAuthParams,

@@ -81,6 +81,8 @@ export enum QueryKeys {
   skillNodeContent = 'skillNodeContent',
   /* Tool favorites (starred marketplace items) */
   toolFavorites = 'toolFavorites',
+  savedViews = 'savedViews',
+  viewsDashboard = 'viewsDashboard',
   /* Per-user skill active/inactive overrides */
   skillStates = 'skillStates',
   /* General user favorites */

@@ -85,6 +85,7 @@ jest.mock('@librechat/api', () => {
 });
 
 jest.mock('@librechat/data-schemas', () => ({
+  SAVED_VIEW_DISPLAYS: ['auto', 'line', 'bar', 'table', 'json'],
   getTenantId: jest.fn(),
   tenantStorage: {
     run: jest.fn((store, fn) => fn()),
@@ -111,6 +112,12 @@ jest.mock('@librechat/data-schemas', () => ({
 }));
 
 jest.mock('~/models', () => ({
+  getSavedViews: jest.fn(),
+  createSavedView: jest.fn(),
+  updateSavedView: jest.fn(),
+  deleteSavedView: jest.fn(),
+  getViewsDashboard: jest.fn(),
+  saveViewsDashboard: jest.fn(),
   findToken: jest.fn(),
   updateToken: jest.fn(),
   createToken: jest.fn(),
@@ -158,6 +165,7 @@ jest.mock('~/cache', () => ({
 
 jest.mock('~/server/middleware', () => ({
   requireJwtAuth: (req, res, next) => next(),
+  configMiddleware: (req, res, next) => next(),
   canAccessMCPServerResource: () => (req, res, next) => next(),
 }));
 
@@ -3416,6 +3424,69 @@ describe('MCP Routes', () => {
 
       expect(response.status).toBe(500);
       expect(response.body).toEqual({ message: 'Deletion failed' });
+    });
+  });
+  describe('saved views routes', () => {
+    const db = require('~/models');
+    const view = { _id: 'v1', name: 'UA weekly', cards: [], createdAt: 'x', updatedAt: 'x' };
+
+    it('lists the current user views', async () => {
+      db.getSavedViews.mockResolvedValue([view]);
+      const response = await request(app).get('/api/mcp/views/saved');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([view]);
+      expect(db.getSavedViews).toHaveBeenCalledWith('test-user-id');
+    });
+
+    it('creates a view from a validated body', async () => {
+      db.createSavedView.mockResolvedValue(view);
+      const response = await request(app)
+        .post('/api/mcp/views/saved')
+        .send({ name: 'UA weekly', cards: [] });
+      expect(response.status).toBe(201);
+      expect(db.createSavedView).toHaveBeenCalledWith({
+        userId: 'test-user-id',
+        name: 'UA weekly',
+        cards: [],
+        turns: [],
+      });
+    });
+
+    it('loads and saves the starred-cards dashboard', async () => {
+      db.getViewsDashboard.mockResolvedValue({ cards: [] });
+      const loaded = await request(app).get('/api/mcp/views/dashboard');
+      expect(loaded.body).toEqual({ cards: [] });
+      expect(db.getViewsDashboard).toHaveBeenCalledWith('test-user-id');
+
+      const card = {
+        id: 'c1',
+        serverName: 'warehouse',
+        toolName: 'query',
+        argsText: '{}',
+        display: 'line',
+      };
+      db.saveViewsDashboard.mockResolvedValue({ cards: [card] });
+      const saved = await request(app)
+        .put('/api/mcp/views/dashboard')
+        .send({ cards: [card] });
+      expect(saved.status).toBe(200);
+      expect(db.saveViewsDashboard).toHaveBeenCalledWith('test-user-id', [card]);
+    });
+
+    it('renames and deletes by id', async () => {
+      db.updateSavedView.mockResolvedValue({ ...view, name: 'Renamed' });
+      const renamed = await request(app).patch('/api/mcp/views/saved/v1').send({ name: 'Renamed' });
+      expect(renamed.body.name).toBe('Renamed');
+      expect(db.updateSavedView).toHaveBeenCalledWith({
+        userId: 'test-user-id',
+        id: 'v1',
+        name: 'Renamed',
+      });
+
+      db.deleteSavedView.mockResolvedValue(true);
+      const deleted = await request(app).delete('/api/mcp/views/saved/v1');
+      expect(deleted.status).toBe(200);
+      expect(db.deleteSavedView).toHaveBeenCalledWith({ userId: 'test-user-id', id: 'v1' });
     });
   });
 });

@@ -1,10 +1,12 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Braces, Trash2 } from 'lucide-react';
+import { useRecoilValue } from 'recoil';
+import { Play, Star, Trash2 } from 'lucide-react';
 import { cn, Button, Spinner, Dropdown, TooltipAnchor, useToastContext } from '@librechat/client';
 import type { MCPServer } from 'librechat-data-provider';
 import type { ViewConfig, ViewDisplay, TableData } from './data';
 import { extractDatasets, buildTable, isTimeLike, MAX_SERIES } from './data';
 import { useCallMCPToolMutation } from '~/data-provider';
+import { cardRunRequestFamily, cardSeedResultFamily } from './store';
 import { useLocalize } from '~/hooks';
 import Chart from './Chart';
 
@@ -14,6 +16,11 @@ type ViewCardProps = {
   onChange: (view: ViewConfig) => void;
   onRemove: (id: string) => void;
   autoRun?: boolean;
+  /** A stored result to show on mount instead of running the tool */
+  initialResult?: string;
+  /** Whether the card is on the custom dashboard; the star renders only with `onToggleStar` */
+  starred?: boolean;
+  onToggleStar?: (view: ViewConfig) => void;
 };
 
 type ModeKey =
@@ -58,15 +65,21 @@ function ResultTable({ table }: { table: TableData }) {
   );
 }
 
-export default function ViewCard({ view, servers, onChange, onRemove, autoRun }: ViewCardProps) {
+export default function ViewCard({
+  view,
+  servers,
+  onChange,
+  onRemove,
+  autoRun,
+  initialResult,
+  starred = false,
+  onToggleStar,
+}: ViewCardProps) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
-  const [result, setResult] = useState<string | null>(null);
+  const seedResult = useRecoilValue(cardSeedResultFamily(view.id));
+  const [result, setResult] = useState<string | null>(initialResult ?? seedResult);
   const [error, setError] = useState<string | null>(null);
-  const [showArgs, setShowArgs] = useState(() => {
-    const trimmed = view.argsText.trim();
-    return trimmed !== '' && trimmed !== '{}';
-  });
 
   const callTool = useCallMCPToolMutation({
     onSuccess: (data) => {
@@ -129,6 +142,18 @@ export default function ViewCard({ view, servers, onChange, onRemove, autoRun }:
     setError(null);
     callTool.mutate({ serverName: view.serverName, toolName: view.toolName, toolArguments });
   }, [view.argsText, view.serverName, view.toolName, callTool, showToast, localize]);
+
+  const runRequest = useRecoilValue(cardRunRequestFamily(view.id));
+  const handledRunRequestRef = useRef(runRequest);
+  useEffect(() => {
+    if (runRequest === handledRunRequestRef.current) {
+      return;
+    }
+    handledRunRequestRef.current = runRequest;
+    if (view.toolName) {
+      handleRun();
+    }
+  }, [runRequest, view.toolName, handleRun]);
 
   const autoRanRef = useRef(false);
   useEffect(() => {
@@ -196,22 +221,27 @@ export default function ViewCard({ view, servers, onChange, onRemove, autoRun }:
           )}
           {localize('com_ui_mcp_views_run')}
         </Button>
-        <TooltipAnchor
-          description={localize('com_ui_mcp_views_arguments')}
-          side="bottom"
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn('size-9 shrink-0', showArgs && 'bg-surface-tertiary')}
-              onClick={() => setShowArgs((current) => !current)}
-              aria-pressed={showArgs}
-              aria-label={localize('com_ui_mcp_views_arguments')}
-            >
-              <Braces className="size-4" aria-hidden="true" />
-            </Button>
-          }
-        />
+        {onToggleStar != null && (
+          <TooltipAnchor
+            description={localize(starred ? 'com_ui_mcp_views_unstar' : 'com_ui_mcp_views_star')}
+            side="bottom"
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0 text-text-secondary hover:bg-surface-secondary hover:text-yellow-500"
+                onClick={() => onToggleStar(view)}
+                aria-pressed={starred}
+                aria-label={localize(starred ? 'com_ui_mcp_views_unstar' : 'com_ui_mcp_views_star')}
+              >
+                <Star
+                  className={cn('size-4', starred && 'fill-yellow-500 text-yellow-500')}
+                  aria-hidden="true"
+                />
+              </Button>
+            }
+          />
+        )}
         <TooltipAnchor
           description={localize('com_ui_mcp_views_remove')}
           side="bottom"
@@ -228,17 +258,6 @@ export default function ViewCard({ view, servers, onChange, onRemove, autoRun }:
           }
         />
       </div>
-      {showArgs && (
-        <textarea
-          value={view.argsText}
-          onChange={(event) => onChange({ ...view, argsText: event.target.value })}
-          rows={2}
-          spellCheck={false}
-          aria-label={localize('com_ui_mcp_views_arguments')}
-          placeholder={localize('com_ui_mcp_views_arguments')}
-          className="w-full resize-y rounded-lg border border-border-light bg-surface-primary p-2 font-mono text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary"
-        />
-      )}
       {error != null && (
         <p className="whitespace-pre-wrap break-words text-xs text-red-500">{error}</p>
       )}
@@ -269,11 +288,6 @@ export default function ViewCard({ view, servers, onChange, onRemove, autoRun }:
                 );
               })}
             </div>
-            {table != null && (
-              <span className="ml-auto text-xs text-text-secondary">
-                {localize('com_ui_mcp_views_rows', { 0: String(table.rows.length) })}
-              </span>
-            )}
           </div>
           {datasets.length > 1 && (
             <div className="flex items-center gap-2">

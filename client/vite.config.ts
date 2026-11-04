@@ -6,7 +6,7 @@ import { createRequire } from 'module';
 import { VitePWA } from 'vite-plugin-pwa';
 import { compression } from 'vite-plugin-compression2';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
-import type { Plugin } from 'vite';
+import type { Plugin, ProxyOptions } from 'vite';
 
 const require = createRequire(import.meta.url);
 
@@ -35,6 +35,37 @@ const backendURL = process.env.HOST
   ? `http://${process.env.HOST}:${backendPort}`
   : `http://localhost:${backendPort}`;
 const buildSourceMap = process.env.NODE_ENV === 'development';
+
+/**
+ * The DuckDB UI (`duckdb -ui`) that the Data page frames on the dev server. It only allows
+ * same-origin framing, so its routes, assets and API are proxied here with the framing headers
+ * removed; the paths are the ones its single-page app requests from its own origin.
+ */
+const duckdbUIURL = process.env.DUCKDB_UI_URL || 'http://127.0.0.1:4213';
+const DUCKDB_UI_PATHS = [
+  '^/hatchling\\.',
+  '/ddb',
+  '/localEvents',
+  '/localToken',
+  '/welcome',
+  '/notebooks',
+  '/home',
+  '/sql',
+  '/dives',
+  '/guides',
+];
+const stripFramingHeaders: ProxyOptions['configure'] = (proxy) => {
+  proxy.on('proxyRes', (proxyRes) => {
+    delete proxyRes.headers['x-frame-options'];
+    delete proxyRes.headers['content-security-policy'];
+  });
+};
+const duckdbUIProxy: Record<string, ProxyOptions> = Object.fromEntries(
+  DUCKDB_UI_PATHS.map((path) => [
+    path,
+    { target: duckdbUIURL, changeOrigin: true, ws: true, configure: stripFramingHeaders },
+  ]),
+);
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
   '@tanstack/react-query-devtools',
   '@tanstack/match-sorter-utils',
@@ -60,6 +91,7 @@ export default defineConfig(({ command }) => ({
         target: backendURL,
         changeOrigin: true,
       },
+      ...duckdbUIProxy,
     },
   },
   // Set the directory where environment variables are loaded from and restrict prefixes

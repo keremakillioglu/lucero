@@ -13,6 +13,8 @@ import {
   MAX_TOOL_FAVORITES,
   type ToolFavoriteMethods,
 } from './favorite';
+/* Saved Views */
+import { createSavedViewMethods, type SavedViewMethods } from './savedView';
 /* Agent Categories */
 import { createAgentCategoryMethods, type AgentCategoryMethods } from './agentCategory';
 /* Agent API Keys */
@@ -126,6 +128,7 @@ export type AllMethods = UserMethods &
   FileMethods &
   MemoryMethods &
   ToolFavoriteMethods &
+  SavedViewMethods &
   AgentCategoryMethods &
   AgentApiKeyMethods &
   MCPServerMethods &
@@ -255,6 +258,7 @@ export function createMethods(
     ...createFileMethods(mongoose),
     ...createMemoryMethods(mongoose),
     ...createToolFavoriteMethods(mongoose),
+    ...createSavedViewMethods(mongoose),
     ...createAgentCategoryMethods(mongoose),
     ...createAgentApiKeyMethods(mongoose),
     ...createMCPServerMethods(mongoose),
@@ -301,6 +305,7 @@ export type {
   FileOwnerScope,
   MemoryMethods,
   ToolFavoriteMethods,
+  SavedViewMethods,
   AgentCategoryMethods,
   AgentApiKeyMethods,
   MCPServerMethods,

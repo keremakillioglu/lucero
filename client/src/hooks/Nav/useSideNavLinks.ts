@@ -5,11 +5,13 @@ import {
   Bot,
   Brain,
   Bookmark,
+  Database,
   NotebookPen,
   ScrollText,
   LayoutDashboard,
   ArrowRightToLine,
   SlidersHorizontal,
+  PieChart,
 } from 'lucide-react';
 import {
   Permissions,
@@ -37,6 +39,9 @@ import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import { PromptsAccordion } from '~/components/Prompts';
 import { SkillsAccordion } from '~/components/Skills';
+
+/** MCP settings are hidden from the left panel for now; flip to restore */
+const SHOW_MCP_SETTINGS = false;
 
 export default function useSideNavLinks({
   hidePanel,
@@ -199,8 +204,9 @@ export default function useSideNavLinks({
     }
 
     if (
-      (hasAccessToUseMCPSettings && availableMCPServers && availableMCPServers.length > 0) ||
-      hasAccessToCreateMCP
+      SHOW_MCP_SETTINGS &&
+      ((hasAccessToUseMCPSettings && availableMCPServers && availableMCPServers.length > 0) ||
+        hasAccessToCreateMCP)
     ) {
       links.push({
         title: 'com_nav_setting_mcp',
@@ -225,6 +231,24 @@ export default function useSideNavLinks({
           }
         },
       });
+      links.push({
+        title: 'com_ui_custom_dashboard',
+        label: '',
+        icon: PieChart,
+        id: 'custom-dashboard',
+        isActive: pathname.startsWith('/dashboard'),
+        onClick: () => navigate('/dashboard'),
+      });
+      if (import.meta.env.DEV) {
+        links.push({
+          title: 'com_ui_data_explorer',
+          label: '',
+          icon: Database,
+          id: 'data-explorer',
+          isActive: pathname.startsWith('/data'),
+          onClick: () => navigate('/data'),
+        });
+      }
     }
 
     if (includeHidePanel && hidePanel) {

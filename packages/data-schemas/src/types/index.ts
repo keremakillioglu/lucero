@@ -24,6 +24,7 @@ export * from './pluginAuth';
 /* Memories */
 export * from './memory';
 export * from './favorite';
+export * from './savedView';
 /* Prompts */
 export * from './prompts';
 /* Skills */

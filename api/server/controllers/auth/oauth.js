@@ -8,6 +8,7 @@ const {
 } = require('@librechat/api');
 const { syncUserEntraGroupMemberships } = require('~/server/services/PermissionService');
 const { setAuthTokens, setOpenIDAuthTokens } = require('~/server/services/AuthService');
+const { refreshDashboardOnLogin } = require('~/server/services/Views/snapshots');
 const getLogStores = require('~/cache/getLogStores');
 const { checkBan } = require('~/server/middleware');
 const { generateToken } = require('~/models');
@@ -79,6 +80,7 @@ function createOAuthHandler(redirectUri = domains.client) {
       } else {
         await setAuthTokens(req.user._id, res, null, req);
       }
+      refreshDashboardOnLogin(req, req.user);
       res.redirect(redirectUri);
     } catch (err) {
       logger.error('Error in setting authentication tokens:', err);

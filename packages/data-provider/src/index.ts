@@ -40,6 +40,7 @@ export {
   loginPage,
   registerPage,
   apiBaseUrl,
+  mcpViewsSuggest,
   sharedFileDownload,
   buildLoginRedirectUrl,
 } from './api-endpoints';

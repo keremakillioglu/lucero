@@ -56,6 +56,16 @@ const loadViewsPage = () =>
     Component: m.default,
   }));
 
+const loadDashboardPage = () =>
+  import('~/components/Dashboard').then((m) => ({
+    Component: m.default,
+  }));
+
+const loadDataPage = () =>
+  import('~/components/Data').then((m) => ({
+    Component: m.default,
+  }));
+
 const baseEl = document.querySelector('base');
 const baseHref = baseEl?.getAttribute('href') || '/';
 
@@ -170,6 +180,18 @@ export const router = createBrowserRouter(
             {
               path: 'views',
               lazy: loadViewsPage,
+            },
+            {
+              path: 'views/:viewId',
+              lazy: loadViewsPage,
+            },
+            {
+              path: 'dashboard',
+              lazy: loadDashboardPage,
+            },
+            {
+              path: 'data',
+              lazy: loadDataPage,
             },
             {
               path: 'projects',

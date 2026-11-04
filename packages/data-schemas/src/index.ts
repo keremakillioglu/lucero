@@ -31,6 +31,7 @@ export {
   MAX_TOOL_FAVORITES,
 } from './methods';
 export { FAVORITE_ITEM_TYPES } from './types/favorite';
+export { SAVED_VIEW_DISPLAYS, MAX_SNAPSHOT_RESULT_LENGTH } from './types/savedView';
 export type * from './types';
 export type * from './methods';
 export {

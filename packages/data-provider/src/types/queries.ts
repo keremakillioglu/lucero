@@ -147,12 +147,71 @@ export type MCPToolCallResponse = {
   result: string;
 };
 
+export type MCPViewDisplay = 'auto' | 'line' | 'bar' | 'table' | 'json';
+
+/** One chart card on the Views page: a single MCP tool call and how to render its result */
+export type MCPViewCard = {
+  id: string;
+  serverName: string;
+  toolName: string;
+  argsText: string;
+  display: MCPViewDisplay;
+  title?: string;
+  datasetPath?: string;
+  xKey?: string;
+  yKeys?: string[];
+  /** The AI Suggest turn that generated this card; absent for manually added cards */
+  turnId?: string;
+};
+
+/** One AI Suggest turn on a view: the user's prompt and the AI overview of the cards it added */
+export type MCPViewTurn = {
+  id: string;
+  prompt: string;
+  overview?: string;
+  createdAt: string;
+};
+
+/** A named set of view cards persisted for the user */
+export type TSavedView = {
+  _id: string;
+  name: string;
+  cards: MCPViewCard[];
+  turns: MCPViewTurn[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TSavedViewInput = {
+  name: string;
+  cards: MCPViewCard[];
+  turns?: MCPViewTurn[];
+};
+
+export type TSavedViewUpdate = { id: string } & Partial<TSavedViewInput>;
+
+/** A dashboard card's stored tool result, captured by the last refresh (ISO `fetchedAt`) */
+export type MCPViewCardSnapshot = {
+  result: string;
+  fetchedAt: string;
+};
+
+/** The user's custom dashboard: copies of the view cards they starred */
+export type TViewsDashboard = {
+  cards: MCPViewCard[];
+  /** Stored results by card id, refreshed at sign-in or on demand */
+  snapshots?: Record<string, MCPViewCardSnapshot>;
+  refreshedAt?: string;
+};
+
 export type MCPSuggestedView = {
   title: string;
   serverName: string;
   toolName: string;
   arguments: Record<string, unknown>;
   display: 'line' | 'bar' | 'table';
+  /** The tool result the agent already fetched with these exact arguments, so the card needn't re-run */
+  result?: string;
 };
 
 export type MCPViewsSuggestParams = {
@@ -160,11 +219,12 @@ export type MCPViewsSuggestParams = {
   servers: Record<string, { tools: Array<{ name: string; description: string }> }>;
 };
 
-export type MCPViewsSuggestResponse = {
-  success: boolean;
-  views: MCPSuggestedView[];
-  notes?: string;
-};
+/** Server-sent events streamed while views are being suggested */
+export type MCPViewsSuggestEvent =
+  | { type: 'thinking'; turn: number }
+  | { type: 'tool'; serverName: string; toolName: string }
+  | { type: 'result'; views: MCPSuggestedView[]; notes?: string }
+  | { type: 'error'; error: string };
 
 export type VerifyToolAuthParams = { toolId: string };
 export type VerifyToolAuthResponse = {

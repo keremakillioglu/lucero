@@ -1,5 +1,6 @@
 const { logger } = require('@librechat/data-schemas');
 const { generate2FATempToken } = require('~/server/services/twoFactorService');
+const { refreshDashboardOnLogin } = require('~/server/services/Views/snapshots');
 const { setAuthTokens } = require('~/server/services/AuthService');
 
 const loginController = async (req, res) => {
@@ -17,6 +18,7 @@ const loginController = async (req, res) => {
     user.id = user._id.toString();
 
     const token = await setAuthTokens(req.user._id, res, null, req);
+    refreshDashboardOnLogin(req, req.user);
 
     return res.status(200).send({ token, user });
   } catch (err) {
