@@ -1,8 +1,5 @@
 import { initializeModel } from '@librechat/agents';
 import { MCP_VIEWS_DEFAULT_PROMPT } from 'librechat-data-provider';
-import type { Providers } from '@librechat/agents';
-import type { Runnable } from '@langchain/core/runnables';
-import type { ToolDefinition } from '@langchain/core/language_models/base';
 import type {
   TModelSpec,
   MCPSuggestedView,
@@ -10,6 +7,9 @@ import type {
   MCPViewsSuggestParams,
 } from 'librechat-data-provider';
 import type { AIMessageChunk, BaseMessageLike } from '@langchain/core/messages';
+import type { ToolDefinition } from '@langchain/core/language_models/base';
+import type { Runnable } from '@langchain/core/runnables';
+import type { Providers } from '@librechat/agents';
 import type { EndpointDbMethods, ServerRequest } from '~/types';
 import { applyModelSpecPreset, getDefaultModelSpec } from '~/modelSpecs';
 import { getProviderConfig } from '~/endpoints';
@@ -91,7 +91,7 @@ export interface SuggestViewsParams {
  * Reminder sent before the last two turns so the agent lands its proposal instead of spending
  * the whole budget exploring; null on every other turn.
  */
-export function turnReminder(turn: number, maxTurns = MAX_TURNS): string | null {
+export function turnReminder(turn: number, maxTurns: number = MAX_TURNS): string | null {
   const remaining = maxTurns - turn;
   if (remaining === 1) {
     return 'One turn remains after this one. Finish verifying now; your next turn must call propose_views.';

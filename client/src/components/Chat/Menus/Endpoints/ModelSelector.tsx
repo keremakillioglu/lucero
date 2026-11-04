@@ -81,7 +81,7 @@ function ModelSelectorContent({ locked = false }: { locked?: boolean }) {
       <div className="relative flex w-full max-w-md flex-col items-center gap-2">
         <div
           data-testid="model-selector-label"
-          className="my-1 flex h-9 w-full max-w-[70vw] cursor-default select-none items-center justify-center gap-2 rounded-xl border border-border-light bg-presentation px-3 py-2 text-sm text-text-primary"
+          className="border-border-light bg-presentation text-text-primary my-1 flex h-9 w-full max-w-[70vw] cursor-default items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm select-none"
         >
           {label}
         </div>

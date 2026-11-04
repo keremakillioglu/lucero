@@ -44,12 +44,18 @@ export function useActivePanel() {
   return context;
 }
 
-/** Returns `active` when it matches a link that renders a panel, otherwise the first link's id. */
+/**
+ * Returns `active` when it matches a link that opens a panel, otherwise the first link's id.
+ * A link with a click handler and no panel component (a page shortcut or an action) is never
+ * the active panel, so selecting it keeps the previous panel in place.
+ */
 export function resolveActivePanel(
   active: string,
-  links: { id: string; Component?: ComponentType }[],
+  links: { id: string; Component?: ComponentType; onClick?: unknown }[],
 ): string {
-  if (links.length > 0 && links.some((l) => l.id === active && l.Component != null)) {
+  const opensPanel = (link: { Component?: ComponentType; onClick?: unknown }) =>
+    link.Component != null || link.onClick == null;
+  if (links.length > 0 && links.some((l) => l.id === active && opensPanel(l))) {
     return active;
   }
   return links[0]?.id ?? active;

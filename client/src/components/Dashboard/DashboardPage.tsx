@@ -4,9 +4,8 @@ import { Button, Spinner } from '@librechat/client';
 import { formatDateTime } from '~/components/Views/data';
 import ViewCard from '~/components/Views/ViewCard';
 import { useMCPToolsQuery } from '~/data-provider';
-import { useLocalize } from '~/hooks';
 import useStarredCards from './starred';
-import '~/components/Views/views.css';
+import { useLocalize } from '~/hooks';
 
 /**
  * Starred view cards. Each card shows the result stored by the last sign-in or manual refresh;
@@ -33,19 +32,19 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto bg-presentation">
+    <div className="bg-presentation flex h-full w-full flex-col overflow-y-auto">
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">
+            <h1 className="text-text-primary flex items-center gap-2 text-xl font-semibold">
               <PieChart className="size-5" aria-hidden="true" />
               {localize('com_ui_custom_dashboard')}
             </h1>
-            <p className="mt-1 text-sm text-text-secondary">
+            <p className="text-text-secondary mt-1 text-sm">
               {localize('com_ui_custom_dashboard_description')}
             </p>
             {refreshedAt != null && (
-              <p className="mt-1 text-xs text-text-secondary">
+              <p className="text-text-secondary mt-1 text-xs">
                 {localize('com_ui_custom_dashboard_as_of', { 0: formatDateTime(refreshedAt) })}
               </p>
             )}
@@ -78,7 +77,7 @@ export default function DashboardPage() {
           </div>
         )}
         {!isLoading && cards.length === 0 && (
-          <p className="py-8 text-center text-sm text-text-secondary">
+          <p className="text-text-secondary py-8 text-center text-sm">
             {localize('com_ui_custom_dashboard_empty')}
           </p>
         )}

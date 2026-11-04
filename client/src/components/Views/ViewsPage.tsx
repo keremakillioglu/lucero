@@ -1,15 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { MCP_VIEWS_DEFAULT_PROMPT } from 'librechat-data-provider';
+import { Button, Spinner, useToastContext } from '@librechat/client';
 import { useRecoilCallback, useRecoilState, useRecoilValue } from 'recoil';
 import { Plus, Save, Trash2, Sparkles, CopyPlus, LayoutDashboard } from 'lucide-react';
-import { Button, Spinner, useToastContext } from '@librechat/client';
-import { MCP_VIEWS_DEFAULT_PROMPT } from 'librechat-data-provider';
 import type { MCPSuggestedView, MCPViewsSuggestParams } from 'librechat-data-provider';
 import type { ViewConfig, ViewTurn } from './data';
 import type { SuggestProgress } from './suggest';
-import { useMCPToolsQuery } from '~/data-provider';
-import useSuggestViews from './suggest';
-import { createViewConfig, groupCardsByTurn } from './data';
-import { useLocalize } from '~/hooks';
 import {
   viewsState,
   viewTurnsState,
@@ -19,12 +15,15 @@ import {
   viewLoadGenerationState,
 } from './store';
 import useStarredCards from '~/components/Dashboard/starred';
+import { createViewConfig, groupCardsByTurn } from './data';
+import { useMCPToolsQuery } from '~/data-provider';
+import useSuggestViews from './suggest';
+import { useLocalize } from '~/hooks';
+import SaveDialog from './SaveDialog';
 import useSavedViews from './saved';
 import useViewRoute from './route';
-import SaveDialog from './SaveDialog';
 import ViewCard from './ViewCard';
 import Turn from './Turn';
-import './views.css';
 
 export default function ViewsPage() {
   const localize = useLocalize();
@@ -166,20 +165,20 @@ export default function ViewsPage() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto bg-presentation">
+    <div className="bg-presentation flex h-full w-full flex-col overflow-y-auto">
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">
+            <h1 className="text-text-primary flex items-center gap-2 text-xl font-semibold">
               <LayoutDashboard className="size-5" aria-hidden="true" />
               {saved.activeView?.name ?? localize('com_ui_mcp_views')}
               {saved.hasUnsavedChanges && (views.length > 0 || turns.length > 0) && (
-                <span className="text-xs font-normal text-text-secondary">
+                <span className="text-text-secondary text-xs font-normal">
                   {localize('com_ui_mcp_views_unsaved')}
                 </span>
               )}
             </h1>
-            <p className="mt-1 text-sm text-text-secondary">
+            <p className="text-text-secondary mt-1 text-sm">
               {localize('com_ui_mcp_views_description')}
             </p>
           </div>
@@ -246,7 +245,7 @@ export default function ViewsPage() {
             }}
             placeholder={localize('com_ui_mcp_views_suggest_placeholder')}
             aria-label={localize('com_ui_mcp_views_suggest')}
-            className="h-9 flex-1 rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary"
+            className="border-border-light bg-surface-primary text-text-primary focus:ring-ring-primary h-9 flex-1 rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
           />
           <Button
             size="sm"
@@ -270,26 +269,26 @@ export default function ViewsPage() {
           <p
             role="status"
             aria-live="polite"
-            className="mb-4 flex items-center gap-2 text-sm text-text-secondary"
+            className="text-text-secondary mb-4 flex items-center gap-2 text-sm"
           >
             <Spinner className="size-3.5" />
             {describeProgress(suggestViews.progress)}
           </p>
         )}
         {servers.length === 0 && (
-          <p className="py-8 text-center text-sm text-text-secondary">
+          <p className="text-text-secondary py-8 text-center text-sm">
             {localize('com_ui_mcp_views_empty')}
           </p>
         )}
         {servers.length > 0 && views.length === 0 && turns.length === 0 && (
-          <p className="py-8 text-center text-sm text-text-secondary">
+          <p className="text-text-secondary py-8 text-center text-sm">
             {localize('com_ui_mcp_views_no_views')}
           </p>
         )}
         <div className="space-y-8">
           {groups.manual.length > 0 && (
             <section aria-label={localize('com_ui_mcp_views_manual')} className="space-y-3">
-              <h2 className="text-sm font-medium text-text-secondary">
+              <h2 className="text-text-secondary text-sm font-medium">
                 {localize('com_ui_mcp_views_manual')}
               </h2>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

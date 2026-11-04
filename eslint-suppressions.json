@@ -522,6 +522,11 @@
       "count": 5
     }
   },
+  "client/src/components/Dashboard/DashboardPage.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
   "client/src/components/Endpoints/ConvoIcon.tsx": {
     "shadcn/no-restyle": {
       "count": 1
@@ -1269,6 +1274,56 @@
     },
     "shadcn/require-static-classes": {
       "count": 1
+    }
+  },
+  "client/src/components/Views/Chart.tsx": {
+    "shadcn/no-arbitrary-values": {
+      "count": 2
+    },
+    "shadcn/no-inline-styles": {
+      "count": 2
+    }
+  },
+  "client/src/components/Views/SaveDialog.tsx": {
+    "shadcn/no-restyle": {
+      "count": 8
+    }
+  },
+  "client/src/components/Views/SidePanel.tsx": {
+    "shadcn/no-restyle": {
+      "count": 4
+    }
+  },
+  "client/src/components/Views/Turn.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "client/src/components/Views/ViewCard.tsx": {
+    "design/disabled-recipe": {
+      "count": 1
+    },
+    "shadcn/no-raw-colors": {
+      "count": 5
+    },
+    "shadcn/no-restyle": {
+      "count": 7
+    },
+    "shadcn/no-unknown-classes": {
+      "count": 1
+    }
+  },
+  "client/src/components/Views/ViewItem.tsx": {
+    "shadcn/no-raw-colors": {
+      "count": 2
+    },
+    "shadcn/no-restyle": {
+      "count": 11
+    }
+  },
+  "client/src/components/Views/ViewsPage.tsx": {
+    "shadcn/no-restyle": {
+      "count": 5
     }
   },
   "client/src/components/Web/SourceHovercard.tsx": {

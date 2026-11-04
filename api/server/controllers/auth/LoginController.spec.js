@@ -26,6 +26,10 @@ jest.mock('~/server/services/AuthService', () => ({
   setAuthTokens: (...args) => mockSetAuthTokens(...args),
 }));
 
+jest.mock('~/server/services/Views/snapshots', () => ({
+  refreshDashboardOnLogin: jest.fn(),
+}));
+
 jest.mock('~/models', () => ({
   getUserById: (...args) => mockGetUserById(...args),
   deleteAllUserSessions: (...args) => mockDeleteAllUserSessions(...args),

@@ -203,6 +203,8 @@ jest.mock('@librechat/api', () => ({
   getAgentErrorMetadata: (...args) =>
     jest.requireActual('@librechat/api').getAgentErrorMetadata(...args),
   loadSkillAccess: (...args) => jest.requireActual('@librechat/api').loadSkillAccess(...args),
+  resolveEphemeralSkillsToggle: (...args) =>
+    jest.requireActual('@librechat/api').resolveEphemeralSkillsToggle(...args),
   getConversationWriteContext: (...args) =>
     jest.requireActual('@librechat/api').getConversationWriteContext(...args),
   isTemporaryTurn: (...args) => jest.requireActual('@librechat/api').isTemporaryTurn(...args),

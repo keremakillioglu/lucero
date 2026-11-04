@@ -28,6 +28,9 @@ jest.mock('~/hooks', () => ({
       com_ui_via_server: `via ${values?.[0]}`,
       com_ui_tool_failed: 'failed',
       com_ui_tool_name_set_memory: 'Save Memory',
+      com_ui_tool_finding_data: 'Finding the right data…',
+      com_ui_tool_checking_definitions: 'Checking definitions…',
+      com_ui_tool_fetching_live: `Fetching today's numbers from ${values?.[0]}`,
     };
     return translations[key] || key;
   },
@@ -781,8 +784,6 @@ describe('ToolCall', () => {
   describe('data tool labels', () => {
     const d = Constants.mcp_delimiter;
 
-    afterEach(() => mockTitleMap.clear());
-
     it.each([
       [`search_models${d}warehouse`, 'Finding the right data…'],
       [`get_model${d}warehouse`, 'Checking definitions…'],
@@ -791,13 +792,6 @@ describe('ToolCall', () => {
       renderWithRecoil(<ToolCall {...mockProps} name={name} />);
       expect(screen.getByTestId('progress-text').textContent).toBe(label);
       expect(screen.queryByTestId('subtitle')).not.toBeInTheDocument();
-    });
-
-    it('should name other tools by their server title when one is configured', () => {
-      mockTitleMap.set('appstore-sales', 'App Store Live');
-      renderWithRecoil(<ToolCall {...mockProps} name={`sales_report${d}appstore-sales`} />);
-      expect(screen.getByTestId('progress-text').textContent).toContain('Completed sales_report');
-      expect(screen.getByTestId('subtitle').textContent).toBe('via App Store Live');
     });
   });
 

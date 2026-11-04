@@ -326,7 +326,10 @@ const initializeClientWithProvider = async ({
   const allowedStatefulCodeEnvironments = resolveAllowedStatefulCodeEnvironments(
     appConfig?.endpoints?.[EModelEndpoint.agents]?.statefulCodeSessions?.allowedEnvironments,
   );
-  const ephemeralSkillsToggle = resolveEphemeralSkillsToggle(req.body?.ephemeralAgent?.skills, req.config?.interfaceConfig);
+  const ephemeralSkillsToggle = resolveEphemeralSkillsToggle(
+    req.body?.ephemeralAgent?.skills,
+    req.config?.interfaceConfig,
+  );
   const skillDbMethods = getSkillDbMethods();
 
   if (!endpointOption.agent) {
