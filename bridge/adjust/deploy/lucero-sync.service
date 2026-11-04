@@ -1,0 +1,13 @@
+[Unit]
+Description=Lucero warehouse sync (Adjust, App Store Connect, RevenueCat -> DuckDB)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=k2akilli
+EnvironmentFile=/etc/adjust-mcp-bridge.env
+WorkingDirectory=/home/k2akilli/code/lucero/bridge/adjust
+ExecStart=/home/k2akilli/.nvm/versions/node/v24.15.0/bin/node sync.js
+Nice=10
+TimeoutStartSec=3h

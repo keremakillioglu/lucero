@@ -183,3 +183,7 @@ CLAUDE.md
 codedb.snapshot
 bridge/**/node_modules/
 librechat.dev.yaml
+
+# local Python tooling for the semantic layer
+bridge/semantic/.venv/
+__pycache__/

@@ -1,45 +1,26 @@
-import jwt from 'jsonwebtoken';
 import express from 'express';
-import { gunzipSync } from 'node:zlib';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { buildWarehouseServer } from './sql.js';
+import {
+  ADJUST_TOKEN,
+  ASC_ENABLED,
+  ASC_VENDOR,
+  RC_APPS,
+  adjustGet,
+  ascGet,
+  rcGet,
+  rcProject,
+  salesReportParams,
+} from './vendors.js';
 
 const PORT = Number(process.env.BRIDGE_PORT || 8765);
 const BRIDGE_TOKEN = process.env.MCP_BRIDGE_TOKEN;
-const ADJUST_TOKEN = process.env.ADJUST_API;
-const RC_KEYS = Object.fromEntries(
-  Object.entries(process.env)
-    .filter(([key, value]) => /^RC_[A-Z0-9]+$/.test(key) && value)
-    .map(([key, value]) => [key.slice(3).toLowerCase(), value]),
-);
-const RC_APPS = Object.keys(RC_KEYS).sort();
-const ASC_KEY = process.env.APP_STORE_CONNECT_SALES;
-const ASC_KEY_ID = process.env.APP_STORE_CONNECT_KEY_ID;
-const ASC_ISSUER_ID = process.env.APP_STORE_CONNECT_ISSUER_ID;
-const ASC_VENDOR = process.env.APP_STORE_CONNECT_VENDOR_NUMBER;
-const BASE = 'https://automate.adjust.com/reports-service';
-const RC_BASE = 'https://api.revenuecat.com/v2';
-const ASC_BASE = 'https://api.appstoreconnect.apple.com/v1';
 
 if (!BRIDGE_TOKEN || !ADJUST_TOKEN) {
   console.error('MCP_BRIDGE_TOKEN and ADJUST_API must be set');
   process.exit(1);
-}
-
-async function adjustGet(path, params) {
-  const url = new URL(`${BASE}/${path}`);
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${ADJUST_TOKEN}` } });
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`Adjust API ${res.status}: ${text.slice(0, 500)}`);
-  }
-  return text;
 }
 
 function textResult(text) {
@@ -133,36 +114,6 @@ function buildServer() {
   return server;
 }
 
-const rcProjects = new Map();
-
-async function rcGet(app, path, params = {}) {
-  const token = RC_KEYS[app];
-  if (!token) {
-    throw new Error(`Unknown RevenueCat app "${app}". Available: ${RC_APPS.join(', ')}`);
-  }
-  const url = new URL(`${RC_BASE}${path}`);
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`RevenueCat API ${res.status}: ${text.slice(0, 500)}`);
-  }
-  return text;
-}
-
-async function rcProject(app) {
-  if (rcProjects.has(app)) return rcProjects.get(app);
-  const { items } = JSON.parse(await rcGet(app, '/projects'));
-  const project = items[0];
-  if (!project?.id) throw new Error(`No RevenueCat project visible to the "${app}" API key`);
-  rcProjects.set(app, project);
-  return project;
-}
-
 function buildRcServer() {
   const server = new McpServer({ name: 'revenuecat-reports', version: '2.0.0' });
   const appParam = z.enum(RC_APPS).describe(`Which app's RevenueCat project to query. One of: ${RC_APPS.join(', ')}`);
@@ -244,35 +195,6 @@ function buildRcServer() {
   return server;
 }
 
-function ascJwt() {
-  const pem = `-----BEGIN PRIVATE KEY-----\n${ASC_KEY.match(/.{1,64}/g).join('\n')}\n-----END PRIVATE KEY-----`;
-  return jwt.sign({ aud: 'appstoreconnect-v1' }, pem, {
-    algorithm: 'ES256',
-    issuer: ASC_ISSUER_ID,
-    keyid: ASC_KEY_ID,
-    expiresIn: '10m',
-  });
-}
-
-async function ascGet(path, params = {}, raw = false) {
-  const url = new URL(`${ASC_BASE}${path}`);
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${ascJwt()}`, ...(raw ? { Accept: 'application/a-gzip' } : {}) },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`App Store Connect API ${res.status}: ${text.slice(0, 600)}`);
-  }
-  if (!raw) return res.text();
-  const buf = Buffer.from(await res.arrayBuffer());
-  return gunzipSync(buf).toString('utf8');
-}
-
 function buildAscServer() {
   const server = new McpServer({ name: 'appstore-sales', version: '1.0.0' });
 
@@ -321,19 +243,7 @@ function buildAscServer() {
           'No vendor number: pass vendor_number, or set APP_STORE_CONNECT_VENDOR_NUMBER on the bridge. Find it at App Store Connect > Payments and Financial Reports (top of page).',
         );
       }
-      const isSubReport = report_type !== 'SALES';
-      const tsv = await ascGet(
-        '/salesReports',
-        {
-          'filter[frequency]': frequency,
-          'filter[reportType]': report_type,
-          'filter[reportSubType]': report_type === 'SUBSCRIBER' ? 'DETAILED' : 'SUMMARY',
-          'filter[reportDate]': report_date,
-          'filter[vendorNumber]': vendor,
-          ...(isSubReport ? { 'filter[version]': '1_4' } : {}),
-        },
-        true,
-      );
+      const tsv = await ascGet('/salesReports', salesReportParams(report_type, frequency, report_date, vendor), true);
       const cap = max_rows ?? 500;
       const lines = tsv.split('\n');
       const body = lines.slice(0, cap + 1).join('\n');
@@ -357,32 +267,14 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/mcp', async (req, res) => {
-  try {
-    const server = buildServer();
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    res.on('close', () => {
-      transport.close();
-      server.close();
-    });
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-  } catch (err) {
-    console.error('MCP request failed:', err);
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: '2.0',
-        error: { code: -32603, message: 'Internal server error' },
-        id: null,
-      });
-    }
-  }
-});
+const mounted = [];
 
-if (RC_APPS.length > 0) {
-  app.post('/rc/mcp', async (req, res) => {
+/** Serves a stateless MCP server (fresh instance per request) at `path` */
+function mount(path, build, label) {
+  mounted.push(path);
+  app.post(path, async (req, res) => {
     try {
-      const server = buildRcServer();
+      const server = build();
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       res.on('close', () => {
         transport.close();
@@ -391,7 +283,7 @@ if (RC_APPS.length > 0) {
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (err) {
-      console.error('RC MCP request failed:', err);
+      console.error(`${label} MCP request failed:`, err);
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: '2.0',
@@ -403,32 +295,13 @@ if (RC_APPS.length > 0) {
   });
 }
 
-if (ASC_KEY && ASC_KEY_ID && ASC_ISSUER_ID) {
-  app.post('/asc/mcp', async (req, res) => {
-    try {
-      const server = buildAscServer();
-      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-      res.on('close', () => {
-        transport.close();
-        server.close();
-      });
-      await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
-    } catch (err) {
-      console.error('ASC MCP request failed:', err);
-      if (!res.headersSent) {
-        res.status(500).json({
-          jsonrpc: '2.0',
-          error: { code: -32603, message: 'Internal server error' },
-          id: null,
-        });
-      }
-    }
-  });
-}
+mount('/mcp', buildServer, 'Adjust');
+if (RC_APPS.length > 0) mount('/rc/mcp', buildRcServer, 'RC');
+if (ASC_ENABLED) mount('/asc/mcp', buildAscServer, 'ASC');
+mount('/wh/mcp', buildWarehouseServer, 'Warehouse');
 
-app.get(['/mcp', '/rc/mcp', '/asc/mcp'], (_req, res) => res.status(405).set('Allow', 'POST').end());
-app.delete(['/mcp', '/rc/mcp', '/asc/mcp'], (_req, res) => res.status(405).set('Allow', 'POST').end());
+app.get(mounted, (_req, res) => res.status(405).set('Allow', 'POST').end());
+app.delete(mounted, (_req, res) => res.status(405).set('Allow', 'POST').end());
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`adjust-mcp-bridge listening on :${PORT}`);

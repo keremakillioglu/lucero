@@ -1,0 +1,10 @@
+[Unit]
+Description=Rebuild the semantic model whenever the warehouse read copy is republished
+
+[Path]
+PathChanged=/var/lib/lucero/warehouse.read.duckdb
+TriggerLimitIntervalSec=60
+TriggerLimitBurst=10
+
+[Install]
+WantedBy=paths.target

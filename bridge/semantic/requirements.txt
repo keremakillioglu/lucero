@@ -1,0 +1,9 @@
+# Apache Ossie Python types, pinned to the commit Vesper benchmarks against
+apache-ossie @ git+https://github.com/apache/ossie.git@01a5488#subdirectory=python
+# Must read files written by @duckdb/node-api 2.0.0
+duckdb==2.0.0
+# Needed by the official Ossie validator (validation/validate.py)
+jsonschema>=4.23
+referencing>=0.35
+sqlglot>=25
+PyYAML>=6.0

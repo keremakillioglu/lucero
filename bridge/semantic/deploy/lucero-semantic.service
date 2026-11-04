@@ -1,0 +1,9 @@
+[Unit]
+Description=Rebuild the Lucero Apache Ossie semantic model from the published warehouse
+
+[Service]
+Type=oneshot
+User=k2akilli
+WorkingDirectory=/home/k2akilli/code/lucero/bridge/semantic
+ExecStart=/home/k2akilli/code/lucero/bridge/semantic/.venv/bin/python build.py
+Nice=10

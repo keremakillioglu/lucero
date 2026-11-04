@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Lucero warehouse sync daily after Apple publishes reports, with a retry
+
+[Timer]
+OnCalendar=*-*-* 15:00:00 UTC
+OnCalendar=*-*-* 21:00:00 UTC
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
