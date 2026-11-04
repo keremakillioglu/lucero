@@ -5,7 +5,6 @@ const {
   matchModelName,
   processModelData,
   getModelMaxTokens,
-  maxOutputTokensMap,
   findMatchingPattern,
 } = require('@librechat/api');
 
@@ -258,6 +257,20 @@ describe('getModelMaxTokens', () => {
     );
   });
 
+  test('should return correct tokens for gpt-5.6 matches', () => {
+    expect(getModelMaxTokens('gpt-5.6')).toBe(maxTokensMap[EModelEndpoint.openAI]['gpt-5.6']);
+    expect(getModelMaxTokens('gpt-5.6-sol')).toBe(maxTokensMap[EModelEndpoint.openAI]['gpt-5.6']);
+    expect(getModelMaxTokens('openai/gpt-5.6')).toBe(
+      maxTokensMap[EModelEndpoint.openAI]['gpt-5.6'],
+    );
+    expect(getModelMaxTokens('gpt-5.6-terra')).toBe(
+      maxTokensMap[EModelEndpoint.openAI]['gpt-5.6-terra'],
+    );
+    expect(getModelMaxTokens('gpt-5.6-luna-2026-07-09')).toBe(
+      maxTokensMap[EModelEndpoint.openAI]['gpt-5.6-luna'],
+    );
+  });
+
   test('should return correct tokens for Anthropic models', () => {
     const models = [
       'claude-2.1',
@@ -335,6 +348,21 @@ describe('getModelMaxTokens', () => {
     );
     expect(getModelMaxTokens('gemini-3.5-flash', EModelEndpoint.google)).toBe(
       maxTokensMap[EModelEndpoint.google]['gemini-3.5-flash'],
+    );
+    expect(getModelMaxTokens('gemini-3.5-flash-lite', EModelEndpoint.google)).toBe(
+      maxTokensMap[EModelEndpoint.google]['gemini-3.5-flash-lite'],
+    );
+    expect(getModelMaxTokens('gemini-3.6-flash', EModelEndpoint.google)).toBe(
+      maxTokensMap[EModelEndpoint.google]['gemini-3.6-flash'],
+    );
+    expect(getModelMaxTokens('gemini-3.7-flash', EModelEndpoint.google)).toBe(
+      maxTokensMap[EModelEndpoint.google]['gemini-3.7-flash'],
+    );
+    expect(getModelMaxTokens('gemini-3.8-flash', EModelEndpoint.google)).toBe(
+      maxTokensMap[EModelEndpoint.google]['gemini-3.8-flash'],
+    );
+    expect(getModelMaxTokens('gemini-4-argon', EModelEndpoint.google)).toBe(
+      maxTokensMap[EModelEndpoint.google]['gemini-4-argon'],
     );
     expect(getModelMaxTokens('gemini-2.5-pro', EModelEndpoint.google)).toBe(
       maxTokensMap[EModelEndpoint.google]['gemini-2.5-pro'],
@@ -564,46 +592,6 @@ describe('getModelMaxTokens', () => {
     expect(getModelMaxTokens('zai-org/GLM-4.5-Air-FP8')).toBe(
       maxTokensMap[EModelEndpoint.openAI]['glm-4.5-air'],
     );
-  });
-
-  test('should return correct max output tokens for GPT-5 models', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    const gpt5Models = [
-      'gpt-5',
-      'gpt-5.1',
-      'gpt-5.2',
-      'gpt-5.3',
-      'gpt-5.4',
-      'gpt-5.4-pro',
-      'gpt-5.5',
-      'gpt-5.5-pro',
-      'gpt-5-mini',
-      'gpt-5-nano',
-      'gpt-5-pro',
-      'gpt-5.2-pro',
-    ];
-    for (const model of gpt5Models) {
-      expect(getModelMaxOutputTokens(model)).toBe(maxOutputTokensMap[EModelEndpoint.openAI][model]);
-      expect(getModelMaxOutputTokens(model, EModelEndpoint.openAI)).toBe(
-        maxOutputTokensMap[EModelEndpoint.openAI][model],
-      );
-      expect(getModelMaxOutputTokens(model, EModelEndpoint.azureOpenAI)).toBe(
-        maxOutputTokensMap[EModelEndpoint.azureOpenAI][model],
-      );
-    }
-  });
-
-  test('should return correct max output tokens for GPT-OSS models', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    ['gpt-oss-20b', 'gpt-oss-120b'].forEach((model) => {
-      expect(getModelMaxOutputTokens(model)).toBe(maxOutputTokensMap[EModelEndpoint.openAI][model]);
-      expect(getModelMaxOutputTokens(model, EModelEndpoint.openAI)).toBe(
-        maxOutputTokensMap[EModelEndpoint.openAI][model],
-      );
-      expect(getModelMaxOutputTokens(model, EModelEndpoint.azureOpenAI)).toBe(
-        maxOutputTokensMap[EModelEndpoint.azureOpenAI][model],
-      );
-    });
   });
 });
 
@@ -1031,45 +1019,6 @@ describe('Meta Models Tests', () => {
     });
   });
 
-  describe('DeepSeek Max Output Tokens', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-
-    test('should return correct max output tokens for deepseek-chat', () => {
-      const expected = maxOutputTokensMap[EModelEndpoint.openAI]['deepseek-chat'];
-      expect(getModelMaxOutputTokens('deepseek-chat')).toBe(expected);
-      expect(getModelMaxOutputTokens('deepseek-chat', EModelEndpoint.openAI)).toBe(expected);
-      expect(getModelMaxOutputTokens('deepseek-chat', EModelEndpoint.custom)).toBe(expected);
-    });
-
-    test('should return correct max output tokens for deepseek-reasoner', () => {
-      const expected = maxOutputTokensMap[EModelEndpoint.openAI]['deepseek-reasoner'];
-      expect(getModelMaxOutputTokens('deepseek-reasoner')).toBe(expected);
-      expect(getModelMaxOutputTokens('deepseek-reasoner', EModelEndpoint.openAI)).toBe(expected);
-      expect(getModelMaxOutputTokens('deepseek-reasoner', EModelEndpoint.custom)).toBe(expected);
-    });
-
-    test('should return correct max output tokens for deepseek-r1', () => {
-      const expected = maxOutputTokensMap[EModelEndpoint.openAI]['deepseek-r1'];
-      expect(getModelMaxOutputTokens('deepseek-r1')).toBe(expected);
-      expect(getModelMaxOutputTokens('deepseek-r1', EModelEndpoint.openAI)).toBe(expected);
-    });
-
-    test('should return correct max output tokens for deepseek base pattern', () => {
-      const expected = maxOutputTokensMap[EModelEndpoint.openAI]['deepseek'];
-      expect(getModelMaxOutputTokens('deepseek')).toBe(expected);
-      expect(getModelMaxOutputTokens('deepseek-v3')).toBe(expected);
-    });
-
-    test('should handle DeepSeek models with provider prefixes for max output tokens', () => {
-      expect(getModelMaxOutputTokens('deepseek/deepseek-chat')).toBe(
-        maxOutputTokensMap[EModelEndpoint.openAI]['deepseek-chat'],
-      );
-      expect(getModelMaxOutputTokens('openrouter/deepseek-reasoner')).toBe(
-        maxOutputTokensMap[EModelEndpoint.openAI]['deepseek-reasoner'],
-      );
-    });
-  });
-
   describe('processModelData with Meta models', () => {
     test('should process Meta model data correctly', () => {
       const input = {
@@ -1418,13 +1367,6 @@ describe('Claude Model Tests', () => {
     );
   });
 
-  it('should return correct max output tokens for Claude Opus 4.6 (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxOutputTokens('claude-opus-4-6', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-opus-4-6'],
-    );
-  });
-
   it('should handle Claude Opus 4.6 model name variations', () => {
     const modelVariations = [
       'claude-opus-4-6',
@@ -1468,13 +1410,6 @@ describe('Claude Model Tests', () => {
     );
   });
 
-  it('should return correct max output tokens for Claude Opus 4.7 (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxOutputTokens('claude-opus-4-7', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-opus-4-7'],
-    );
-  });
-
   it('should match model names correctly for Claude Opus 4.7', () => {
     const modelVariations = [
       'claude-opus-4-7',
@@ -1499,13 +1434,6 @@ describe('Claude Model Tests', () => {
     );
   });
 
-  it('should return correct max output tokens for Claude Opus 4.8 (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxOutputTokens('claude-opus-4-8', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-opus-4-8'],
-    );
-  });
-
   it('should match model names correctly for Claude Opus 4.8', () => {
     const modelVariations = [
       'claude-opus-4-8',
@@ -1521,19 +1449,36 @@ describe('Claude Model Tests', () => {
     });
   });
 
+  it('should return correct context length for Claude Opus 5 (1M)', () => {
+    expect(getModelMaxTokens('claude-opus-5', EModelEndpoint.anthropic)).toBe(
+      maxTokensMap[EModelEndpoint.anthropic]['claude-opus-5'],
+    );
+    expect(getModelMaxTokens('claude-opus-5')).toBe(
+      maxTokensMap[EModelEndpoint.anthropic]['claude-opus-5'],
+    );
+  });
+
+  it('should match model names correctly for Claude Opus 5', () => {
+    const modelVariations = [
+      'claude-opus-5',
+      'claude-opus-5-20260701',
+      'claude-opus-5-latest',
+      'anthropic/claude-opus-5',
+      'claude-opus-5/anthropic',
+      'claude-opus-5-preview',
+    ];
+
+    modelVariations.forEach((model) => {
+      expect(matchModelName(model, EModelEndpoint.anthropic)).toBe('claude-opus-5');
+    });
+  });
+
   it('should return correct context length for Claude Fable 5 (1M)', () => {
     expect(getModelMaxTokens('claude-fable-5', EModelEndpoint.anthropic)).toBe(
       maxTokensMap[EModelEndpoint.anthropic]['claude-fable-5'],
     );
     expect(getModelMaxTokens('claude-fable-5')).toBe(
       maxTokensMap[EModelEndpoint.anthropic]['claude-fable-5'],
-    );
-  });
-
-  it('should return correct max output tokens for Claude Fable 5 (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxOutputTokens('claude-fable-5', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-fable-5'],
     );
   });
 
@@ -1561,13 +1506,6 @@ describe('Claude Model Tests', () => {
     );
   });
 
-  it('should return correct max output tokens for Claude Mythos 5 (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxOutputTokens('claude-mythos-5', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-mythos-5'],
-    );
-  });
-
   it('should match model names correctly for Claude Mythos 5', () => {
     const modelVariations = [
       'claude-mythos-5',
@@ -1583,6 +1521,32 @@ describe('Claude Model Tests', () => {
     });
   });
 
+  it('should return correct context length for Claude Fable 5.1 (1M)', () => {
+    expect(maxTokensMap[EModelEndpoint.anthropic]['claude-fable-5-1']).toBe(1000000);
+    expect(maxTokensMap[EModelEndpoint.anthropic]['claude-mythos-5-1']).toBe(1000000);
+    expect(getModelMaxTokens('claude-fable-5-1', EModelEndpoint.anthropic)).toBe(1000000);
+    expect(getModelMaxTokens('claude-mythos-5-1', EModelEndpoint.anthropic)).toBe(1000000);
+  });
+
+  it('should match model names correctly for Claude Fable 5.1 without collapsing to Fable 5', () => {
+    const modelVariations = [
+      'claude-fable-5-1',
+      'claude-fable-5-1-20260901',
+      'claude-fable-5-1-latest',
+      'anthropic/claude-fable-5-1',
+      'claude-fable-5-1/anthropic',
+      'anthropic.claude-fable-5-1',
+    ];
+
+    modelVariations.forEach((model) => {
+      expect(matchModelName(model, EModelEndpoint.anthropic)).toBe('claude-fable-5-1');
+    });
+
+    expect(matchModelName('claude-fable-5-20260609', EModelEndpoint.anthropic)).toBe(
+      'claude-fable-5',
+    );
+  });
+
   it('should return correct context length for Claude Sonnet 4.6 (1M)', () => {
     expect(getModelMaxTokens('claude-sonnet-4-6', EModelEndpoint.anthropic)).toBe(
       maxTokensMap[EModelEndpoint.anthropic]['claude-sonnet-4-6'],
@@ -1595,16 +1559,6 @@ describe('Claude Model Tests', () => {
     );
     expect(getModelMaxTokens('claude-sonnet-4-6')).toBeGreaterThan(
       getModelMaxTokens('claude-sonnet-4-5'),
-    );
-  });
-
-  it('should return correct max output tokens for Claude Sonnet 4.6 (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxOutputTokens('claude-sonnet-4-6', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-sonnet-4-6'],
-    );
-    expect(getModelMaxOutputTokens('claude-sonnet-4.6', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-sonnet-4.6'],
     );
   });
 
@@ -1625,37 +1579,6 @@ describe('Claude Model Tests', () => {
       expect(getModelMaxTokens(model, EModelEndpoint.anthropic)).toBe(1000000);
     });
     expect(getModelMaxTokens('anthropic.claude-4-10-sonnet', EModelEndpoint.bedrock)).toBe(1000000);
-  });
-
-  it('should return correct max output tokens for Claude Sonnet 4.7+ aliases (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    [
-      'claude-sonnet-4-7',
-      'claude-sonnet-4.7',
-      'claude-sonnet-4-8',
-      'claude-sonnet-4.8',
-      'claude-sonnet-4-9',
-      'claude-sonnet-4.9',
-      'claude-sonnet-4-10',
-      'claude-sonnet-4.10',
-      'claude-4-10-sonnet',
-      'claude-4.10-sonnet',
-    ].forEach((model) => {
-      expect(getModelMaxOutputTokens(model, EModelEndpoint.anthropic)).toBe(128000);
-    });
-  });
-
-  it('should not treat dated Claude Sonnet 4 IDs as Claude Sonnet 4.6+ aliases', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxTokens('claude-sonnet-4-20250514', EModelEndpoint.anthropic)).toBe(
-      maxTokensMap[EModelEndpoint.anthropic]['claude-sonnet-4'],
-    );
-    expect(getModelMaxOutputTokens('claude-sonnet-4-20250514', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-sonnet-4'],
-    );
-    expect(getModelMaxTokens('claude-4-20250514-sonnet', EModelEndpoint.bedrock)).toBe(
-      maxTokensMap[EModelEndpoint.bedrock]['claude-4'],
-    );
   });
 
   it('should keep double-digit Claude Sonnet 4 minor names when matching models', () => {
@@ -1711,16 +1634,6 @@ describe('Claude Model Tests', () => {
     );
     expect(getModelMaxTokens('claude-sonnet-5')).toBe(
       maxTokensMap[EModelEndpoint.anthropic]['claude-sonnet-5'],
-    );
-  });
-
-  it('should return correct max output tokens for Claude Sonnet 5 (128K)', () => {
-    const { getModelMaxOutputTokens } = require('@librechat/api');
-    expect(getModelMaxOutputTokens('claude-sonnet-5', EModelEndpoint.anthropic)).toBe(
-      maxOutputTokensMap[EModelEndpoint.anthropic]['claude-sonnet-5'],
-    );
-    expect(getModelMaxOutputTokens('claude-sonnet-5', EModelEndpoint.anthropic)).toBe(
-      getModelMaxOutputTokens('claude-sonnet-4-6', EModelEndpoint.anthropic),
     );
   });
 

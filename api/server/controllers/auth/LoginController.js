@@ -1,32 +1,22 @@
-const { logger } = require('@librechat/data-schemas');
+const { createLoginController, clearCloudFrontCookies } = require('@librechat/api');
 const { generate2FATempToken } = require('~/server/services/twoFactorService');
 const { refreshDashboardOnLogin } = require('~/server/services/Views/snapshots');
+const { getUserById, deleteAllUserSessions } = require('~/models');
 const { setAuthTokens } = require('~/server/services/AuthService');
 
-const loginController = async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    if (req.user.twoFactorEnabled) {
-      const tempToken = generate2FATempToken(req.user._id);
-      return res.status(200).json({ twoFAPending: true, tempToken });
-    }
-
-    const { password: _p, totpSecret: _t, __v, ...user } = req.user;
-    user.id = user._id.toString();
-
-    const token = await setAuthTokens(req.user._id, res, null, req);
-    refreshDashboardOnLogin(req, req.user);
-
-    return res.status(200).send({ token, user });
-  } catch (err) {
-    logger.error('[loginController]', err);
-    return res.status(500).json({ message: 'Something went wrong' });
-  }
+/** Issues the session like the plain service, then refreshes the dashboard for this sign-in */
+const setAuthTokensAndRefreshDashboard = async (userId, res, session, req) => {
+  const token = await setAuthTokens(userId, res, session, req);
+  refreshDashboardOnLogin(req, { id: String(userId) });
+  return token;
 };
 
-module.exports = {
-  loginController,
-};
+const loginController = createLoginController({
+  generate2FATempToken,
+  getUserById,
+  deleteAllUserSessions,
+  setAuthTokens: setAuthTokensAndRefreshDashboard,
+  clearCloudFrontCookies,
+});
+
+module.exports = { loginController };

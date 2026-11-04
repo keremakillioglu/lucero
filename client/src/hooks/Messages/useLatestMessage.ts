@@ -1,35 +1,20 @@
-import { useCallback } from 'react';
-import { selectorFamily, useRecoilValue } from 'recoil';
+import { useCallback, useMemo } from 'react';
+import { useStore } from 'jotai';
+import { useRecoilValue } from 'recoil';
 import { useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Constants, QueryKeys } from 'librechat-data-provider';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TMessage } from 'librechat-data-provider';
+import {
+  siblingIdxFamily,
+  siblingKey,
+  useSiblingIndexes,
+} from '~/components/Chat/Messages/Thread/state';
 import { getMessageBranchSiblingParentIds, selectActiveBranchTail } from '~/utils';
 import store from '~/store';
 
-const NULL_PARENT_KEY = '__null_parent__';
 const EMPTY_PARENT_IDS: (string | null)[] = [];
-
-const getParentLookupKey = (parentMessageId: string | null | undefined) =>
-  parentMessageId ?? NULL_PARENT_KEY;
-
-const siblingIndexesByParentSelector = selectorFamily<
-  Record<string, number>,
-  readonly (string | null)[]
->({
-  key: 'latestMessageSiblingIndexesByParent',
-  get:
-    (parentIds) =>
-    ({ get }) => {
-      const indexes: Record<string, number> = {};
-
-      for (const parentId of parentIds) {
-        indexes[getParentLookupKey(parentId)] = get(store.messagesSiblingIdxFamily(parentId));
-      }
-
-      return indexes;
-    },
-});
+const getParentLookupKey = siblingKey;
 
 function useMessagesCacheSelect<TData>(
   messagesQueryId: string | null | undefined,
@@ -81,11 +66,13 @@ function useLatestMessageSiblingIndexes(
   rootSiblingKey: string | null,
 ) {
   const selectParentIds = useCallback(
-    (messages: TMessage[]) => getMessageBranchSiblingParentIds(messages, rootSiblingKey),
+    (messages: TMessage[]) =>
+      getMessageBranchSiblingParentIds(messages, messages[0]?.conversationId ?? rootSiblingKey),
     [rootSiblingKey],
   );
   const parentIds = useMessagesCacheSelect(messagesQueryId, selectParentIds) ?? EMPTY_PARENT_IDS;
-  return useRecoilValue(siblingIndexesByParentSelector(parentIds));
+  const parentKeys = useMemo(() => parentIds.map(siblingKey), [parentIds]);
+  return useSiblingIndexes(parentKeys);
 }
 
 export function useLatestMessage(
@@ -99,7 +86,7 @@ export function useLatestMessage(
     (messages: TMessage[]) =>
       selectActiveBranchTail(
         messages,
-        conversationId,
+        messages[0]?.conversationId ?? conversationId,
         (parentId) => siblingIndexes[getParentLookupKey(parentId)] ?? 0,
       ),
     [conversationId, siblingIndexes],
@@ -119,11 +106,76 @@ export function useLatestMessageId(
     (messages: TMessage[]) =>
       selectActiveBranchTail(
         messages,
-        conversationId,
+        messages[0]?.conversationId ?? conversationId,
         (parentId) => siblingIndexes[getParentLookupKey(parentId)] ?? 0,
       )?.messageId ?? null,
     [conversationId, siblingIndexes],
   );
 
   return useMessagesCacheSelect(messagesQueryId, select);
+}
+
+export type TLatestMessageMeta = Pick<TMessage, 'messageId' | 'error' | 'isCreatedByUser'>;
+
+/**
+ * Metadata-only projection of the branch tail. Streaming deltas leave these
+ * fields untouched, so React Query's structural sharing keeps the selected
+ * object referentially stable and consumers skip the per-delta re-renders a
+ * full `useLatestMessage` subscription would cause.
+ */
+export function useLatestMessageMeta(
+  index: string | number,
+  messagesQueryIdOverride?: string | null,
+): TLatestMessageMeta | null {
+  const conversationId = useRecoilValue(store.conversationIdByIndex(index));
+  const messagesQueryId = useLatestMessagesQueryId(index, conversationId, messagesQueryIdOverride);
+  const siblingIndexes = useLatestMessageSiblingIndexes(messagesQueryId, conversationId);
+  const select = useCallback(
+    (messages: TMessage[]): TLatestMessageMeta | null => {
+      const tail = selectActiveBranchTail(
+        messages,
+        messages[0]?.conversationId ?? conversationId,
+        (parentId) => siblingIndexes[getParentLookupKey(parentId)] ?? 0,
+      );
+      if (!tail) {
+        return null;
+      }
+      return {
+        messageId: tail.messageId,
+        error: tail.error,
+        isCreatedByUser: tail.isCreatedByUser,
+      };
+    },
+    [conversationId, siblingIndexes],
+  );
+
+  return useMessagesCacheSelect(messagesQueryId, select);
+}
+
+/**
+ * Call-time reader for the branch tail: no cache subscription at all, so
+ * callbacks that only need the latest message when invoked keep a stable
+ * identity across streaming deltas.
+ */
+export function useGetLatestMessage(
+  index: string | number,
+  messagesQueryIdOverride?: string | null,
+): () => TMessage | null {
+  const queryClient = useQueryClient();
+  const jotaiStore = useStore();
+  const conversationId = useRecoilValue(store.conversationIdByIndex(index));
+  const messagesQueryId = useLatestMessagesQueryId(index, conversationId, messagesQueryIdOverride);
+
+  return useCallback((): TMessage | null => {
+    if (!messagesQueryId) {
+      return null;
+    }
+    const messages =
+      queryClient.getQueryData<TMessage[]>([QueryKeys.messages, messagesQueryId]) ?? [];
+    return selectActiveBranchTail(
+      messages,
+      messages[0]?.conversationId ?? conversationId,
+      (parentId) => jotaiStore.get(siblingIdxFamily(siblingKey(parentId))),
+    );
+  }, [queryClient, jotaiStore, conversationId, messagesQueryId]);
 }

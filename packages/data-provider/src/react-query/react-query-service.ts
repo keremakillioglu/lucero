@@ -4,7 +4,7 @@ import type {
   UseMutationResult,
   QueryObserverResult,
 } from '@tanstack/react-query';
-import { MCPServerConnectionStatusResponse } from '../types/queries';
+import type { MCPReinitializeResponse } from '../types/mcpServers';
 import { Constants, initialModelsConfig } from '../config';
 import { defaultOrderQuery } from '../types/assistants';
 import * as permissions from '../accessPermissions';
@@ -74,18 +74,6 @@ export const useGetConversationByIdQuery = (
   );
 };
 
-//This isn't ideal because its just a query and we're using mutation, but it was the only way
-//to make it work with how the Chat component is structured
-export const useGetConversationByIdMutation = (id: string): UseMutationResult<s.TConversation> => {
-  const queryClient = useQueryClient();
-  return useMutation(() => dataService.getConversationById(id), {
-    // onSuccess: (res: s.TConversation) => {
-    onSuccess: () => {
-      queryClient.invalidateQueries([QueryKeys.conversation, id]);
-    },
-  });
-};
-
 export const useUpdateMessageMutation = (
   id: string,
 ): UseMutationResult<unknown, unknown, t.TUpdateMessageRequest, unknown> => {
@@ -133,6 +121,7 @@ export const useClearConversationsMutation = (): UseMutationResult<unknown> => {
   return useMutation(() => dataService.clearAllConversations(), {
     onSuccess: () => {
       queryClient.invalidateQueries([QueryKeys.allConversations]);
+      queryClient.invalidateQueries([QueryKeys.pinnedConversations]);
       queryClient.invalidateQueries([QueryKeys.conversationTags]);
     },
   });
@@ -226,20 +215,6 @@ export const useDeletePresetMutation = (): UseMutationResult<
   });
 };
 
-export const useUpdateTokenCountMutation = (): UseMutationResult<
-  t.TUpdateTokenCountResponse,
-  unknown,
-  { text: string },
-  unknown
-> => {
-  const queryClient = useQueryClient();
-  return useMutation(({ text }: { text: string }) => dataService.updateTokenCount(text), {
-    onSuccess: () => {
-      queryClient.invalidateQueries([QueryKeys.tokenCount]);
-    },
-  });
-};
-
 export const useRegisterUserMutation = (
   options?: m.RegistrationOptions,
 ): UseMutationResult<t.TError, unknown, t.TRegisterUser, unknown> => {
@@ -300,21 +275,6 @@ export const useResetPasswordMutation = (): UseMutationResult<
   return useMutation((payload: t.TResetPassword) => dataService.resetPassword(payload));
 };
 
-export const useAvailablePluginsQuery = <TData = s.TPlugin[]>(
-  config?: UseQueryOptions<s.TPlugin[], unknown, TData>,
-): QueryObserverResult<TData> => {
-  return useQuery<s.TPlugin[], unknown, TData>(
-    [QueryKeys.availablePlugins],
-    () => dataService.getAvailablePlugins(),
-    {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      ...config,
-    },
-  );
-};
-
 export const useUpdateUserPluginsMutation = (
   _options?: m.UpdatePluginAuthOptions,
 ): UseMutationResult<t.TUser, unknown, t.TUpdateUserPlugins, unknown> => {
@@ -334,13 +294,7 @@ export const useUpdateUserPluginsMutation = (
 };
 
 export const useReinitializeMCPServerMutation = (): UseMutationResult<
-  {
-    success: boolean;
-    message: string;
-    serverName: string;
-    oauthRequired?: boolean;
-    oauthUrl?: string;
-  },
+  MCPReinitializeResponse,
   unknown,
   string,
   unknown
@@ -479,6 +433,10 @@ export const useUpdateResourcePermissionsMutation = (): UseMutationResult<
       queryClient.invalidateQueries({
         queryKey: [QueryKeys.effectivePermissions, variables.resourceType, variables.resourceId],
       });
+
+      queryClient.invalidateQueries({
+        queryKey: [QueryKeys.effectivePermissions, 'all', variables.resourceType],
+      });
     },
   });
 };
@@ -510,24 +468,6 @@ export const useGetAllEffectivePermissionsQuery = (
     staleTime: 30000,
     ...config,
   });
-};
-
-export const useMCPServerConnectionStatusQuery = (
-  serverName: string,
-  config?: UseQueryOptions<MCPServerConnectionStatusResponse>,
-): QueryObserverResult<MCPServerConnectionStatusResponse> => {
-  return useQuery<MCPServerConnectionStatusResponse>(
-    [QueryKeys.mcpConnectionStatus, serverName],
-    () => dataService.getMCPServerConnectionStatus(serverName),
-    {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      staleTime: 10000, // 10 seconds
-      enabled: !!serverName,
-      ...config,
-    },
-  );
 };
 
 export const useGetAgentApiKeysQuery = (

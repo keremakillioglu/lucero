@@ -49,8 +49,9 @@ function ModelSelectorContent({ locked = false }: { locked?: boolean }) {
         selectedValues,
         modelSpecs,
         endpointsConfig,
+        agentsMap,
       }),
-    [mappedEndpoints, selectedValues, modelSpecs, endpointsConfig],
+    [mappedEndpoints, selectedValues, modelSpecs, endpointsConfig, agentsMap],
   );
   const selectedDisplayValue = useMemo(
     () =>
@@ -67,11 +68,11 @@ function ModelSelectorContent({ locked = false }: { locked?: boolean }) {
   const label = (
     <>
       {selectedIcon && React.isValidElement(selectedIcon) && (
-        <div className="flex flex-shrink-0 items-center justify-center overflow-hidden">
+        <div className="flex shrink-0 items-center justify-center overflow-hidden">
           {selectedIcon}
         </div>
       )}
-      <span className="flex-grow truncate text-left">{selectedDisplayValue}</span>
+      <span className="truncate text-start">{selectedDisplayValue}</span>
     </>
   );
 
@@ -96,7 +97,7 @@ function ModelSelectorContent({ locked = false }: { locked?: boolean }) {
         <button
           data-testid="model-selector-button"
           aria-keyshortcuts={modelSelectorAriaKey}
-          className="my-1 flex h-9 w-full max-w-[70vw] items-center justify-center gap-2 rounded-xl border border-border-light bg-presentation px-3 py-2 text-sm text-text-primary hover:bg-surface-active-alt"
+          className="border-border-chrome bg-presentation text-text-primary hover:bg-surface-active-alt rounded-theme-control my-1 flex h-9 max-w-full items-center gap-2 border px-3 py-2 text-sm"
           aria-label={localize('com_ui_select_model')}
         >
           {label}
@@ -106,7 +107,7 @@ function ModelSelectorContent({ locked = false }: { locked?: boolean }) {
   );
 
   return (
-    <div className="relative flex w-full max-w-md flex-col items-center gap-2">
+    <div className="relative flex max-w-[60vw] min-w-0 flex-col items-center gap-2 sm:max-w-xs">
       <Menu
         values={selectedValues}
         onValuesChange={(values: Record<string, any>) => {

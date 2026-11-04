@@ -14,7 +14,16 @@ export type BuiltinId =
   | `${AgentCapabilities.file_search}`
   | `${AgentCapabilities.artifacts}`
   | `${AgentCapabilities.memory}`
-  | `${AgentCapabilities.context}`;
+  | `${AgentCapabilities.context}`
+  /**
+   * Native tool, not a capability: PRESENTED with the builtins (it ships with
+   * the app and pauses the run, like a first-class feature), but selection and
+   * toggling ride `agent.tools` exactly like a plugin — see the special cases
+   * in `selectors.ts` / `mutations.ts`.
+   */
+  | 'ask_user_question'
+  | `${AgentCapabilities.subagents}`
+  | 'handoffs';
 
 export type AgentItemStatus = 'needs_setup';
 
@@ -72,6 +81,13 @@ export interface ActionItem extends ItemBase {
 }
 
 export type AgentItem = BuiltinItem | ToolItem | McpItem | SkillItem | ActionItem;
+
+/** A live state shown beside an item, such as an MCP server's connection. */
+export interface ItemStatus {
+  label: string;
+  /** Semantic `bg-status-*` fill for the dot that accompanies the label. */
+  tone: string;
+}
 
 export type ItemFilter = {
   search?: string;

@@ -1,6 +1,9 @@
 import { logger } from '@librechat/data-schemas';
 import type { AppConfig } from '@librechat/data-schemas';
 import { getScoreDestinations, type LangfuseScoreDestination } from './destinations';
+import { isLangfuseTraceAllowed } from './policy';
+import { mergeHeaders } from '~/utils/headers';
+import { redirectPolicyFor } from './utils';
 
 export type LangfuseFeedback = {
   rating?: 'thumbsUp' | 'thumbsDown';
@@ -12,10 +15,24 @@ export type LangfuseFeedbackMetadata = Record<string, string | number | boolean 
 
 export type SendFeedbackScoreParams = {
   traceId: string;
+  sampled?: boolean;
+  destinationIds?: string[];
   feedback?: LangfuseFeedback | null;
   metadata?: LangfuseFeedbackMetadata;
   observationId?: string;
   appConfig?: AppConfig;
+  /**
+   * Must mirror the value used when the trace was generated. `destinationIds`
+   * only restricts feedback to destinations that carry a stable id, so a caller
+   * that opts out of central export has to re-assert it here for destinations
+   * whose project identity is unknown.
+   */
+  centralTraceExportEnabled?: boolean;
+  /**
+   * Whether the message belongs to a temporary chat. Checked on its own because
+   * a resumed turn's response stores no trace record to carry the decision.
+   */
+  isTemporary?: boolean | null;
 };
 
 const ENVIRONMENT = process.env.LANGFUSE_TRACING_ENVIRONMENT;
@@ -52,7 +69,8 @@ async function deleteScore(destination: LangfuseScoreDestination, scoreId: strin
     `${destination.baseUrl}/api/public/scores/${encodeURIComponent(scoreId)}`,
     {
       method: 'DELETE',
-      headers: { Authorization: destination.authorization },
+      headers: mergeHeaders(destination.headers, { Authorization: destination.authorization }),
+      ...redirectPolicyFor(destination.headers),
     },
   );
   if (!res.ok && res.status !== 404) {
@@ -66,8 +84,12 @@ async function createScore(
 ): Promise<void> {
   const res = await fetch(`${destination.baseUrl}/api/public/scores`, {
     method: 'POST',
-    headers: { Authorization: destination.authorization, 'Content-Type': 'application/json' },
+    headers: mergeHeaders(destination.headers, {
+      Authorization: destination.authorization,
+      'Content-Type': 'application/json',
+    }),
     body: JSON.stringify(payload),
+    ...redirectPolicyFor(destination.headers),
   });
   if (!res.ok) {
     throw new Error(`score create ${res.status}: ${await res.text()}`);
@@ -102,16 +124,23 @@ function buildScorePayload({
 
 export async function sendFeedbackScore({
   traceId,
+  sampled,
+  destinationIds,
   feedback,
   metadata = {},
   observationId,
   appConfig,
+  centralTraceExportEnabled,
+  isTemporary,
 }: SendFeedbackScoreParams): Promise<void> {
-  if (!traceId) {
+  if (!traceId || !isLangfuseTraceAllowed(appConfig, isTemporary)) {
     return;
   }
 
-  const destinations = getScoreDestinations(appConfig);
+  const destinationIdSet = destinationIds == null ? undefined : new Set(destinationIds);
+  const destinations = (
+    await getScoreDestinations(appConfig, traceId, sampled, { centralTraceExportEnabled })
+  ).filter(({ id }) => destinationIdSet == null || (id != null && destinationIdSet.has(id)));
   if (destinations.length === 0) {
     return;
   }
